@@ -125,7 +125,7 @@ export function triggerApkDownload(): void {
 
 /**
  * Primary Install CTA: start the useful action immediately.
- * PWA prompt → APK download → caller shows short A2HS fallback.
+ * PWA prompt → APK download (non-iOS) → caller shows short A2HS fallback.
  */
 export async function startInstallFlow(): Promise<InstallFlowResult> {
   if (isStandaloneDisplay()) return "standalone";
@@ -133,6 +133,11 @@ export async function startInstallFlow(): Promise<InstallFlowResult> {
   if (getInstallPrompt()) {
     await promptPwaInstall();
     return "prompted";
+  }
+
+  // iOS can't install APKs — go straight to Add to Home Screen steps.
+  if (getPlatformHint() === "ios") {
+    return "fallback";
   }
 
   const cached = getApkAvailableCached();
