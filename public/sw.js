@@ -1,5 +1,5 @@
 /* Bookly service worker — network-first shell; snappy install (no huge worker). */
-const CACHE = "bookly-shell-v6";
+const CACHE = "bookly-shell-v7";
 const SHELL = [
   "./",
   "./manifest.webmanifest",
