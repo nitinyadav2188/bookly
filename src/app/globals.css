@@ -755,6 +755,15 @@ body {
   pointer-events: none;
 }
 
+/* Shared opening language (boot splash + preparing) */
+.bookly-opening {
+  background-color: var(--cream);
+  background-image:
+    linear-gradient(var(--cream-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cream-grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
 .preparing-bar {
   height: 10px;
   width: 100%;

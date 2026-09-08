@@ -1,11 +1,13 @@
 /* Bookly service worker — network-first shell for offline install. */
-const CACHE = "bookly-shell-v4";
+const CACHE = "bookly-shell-v5";
 const SHELL = [
   "./",
   "./manifest.webmanifest",
   "./favicon.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
+  "./icons/icon-512-any.png",
+  "./icons/apple-touch-icon.png",
   "./sounds/page-turn.wav",
 ];
 
