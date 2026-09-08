@@ -5,6 +5,15 @@ import { PageFlip } from "page-flip";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
+import { AnnotationLayer, AnnotationToolbar } from "@/components/AnnotationLayer";
+import {
+  loadAnnotations,
+  saveAnnotations,
+  type HighlightColor,
+  type NoteVibe,
+  type PageHighlight,
+  type PageNote,
+} from "@/lib/annotations";
 import { loadPdfDocument, renderPdfPageToCanvas, type OpenedPdf } from "@/lib/pdf";
 import { getSavedPage, savePage } from "@/lib/session";
 import { playPageTurnSound, unlockPageSound } from "@/lib/sound";
@@ -106,10 +115,32 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const [zoom, setZoom] = useState(1);
   const [jumpDraft, setJumpDraft] = useState("");
   const [editingJump, setEditingJump] = useState(false);
+  const [annotateMode, setAnnotateMode] = useState(false);
+  const [annotTool, setAnnotTool] = useState<"highlight" | "note">("highlight");
+  const [annotColor, setAnnotColor] = useState<HighlightColor>("lime");
+  const [annotVibe, setAnnotVibe] = useState<NoteVibe>("note to self");
+  const [highlights, setHighlights] = useState<PageHighlight[]>([]);
+  const [notes, setNotes] = useState<PageNote[]>([]);
+  const [markedFlash, setMarkedFlash] = useState(false);
+  const [annotsHydrated, setAnnotsHydrated] = useState(false);
 
   soundOnRef.current = soundOn;
   zoomRef.current = zoom;
   readyRef.current = ready;
+
+  useEffect(() => {
+    setAnnotsHydrated(false);
+    const data = loadAnnotations(doc.id);
+    setHighlights(data.highlights);
+    setNotes(data.notes);
+    setAnnotateMode(false);
+    setAnnotsHydrated(true);
+  }, [doc.id]);
+
+  useEffect(() => {
+    if (!annotsHydrated) return;
+    saveAnnotations(doc.id, { highlights, notes });
+  }, [doc.id, highlights, notes, annotsHydrated]);
 
   const ensurePagesRendered = useCallback(
     async (centerIndex: number, radiusOverride?: number) => {
@@ -423,9 +454,32 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     setZoom((z) => Math.min(1.6, Math.max(0.7, Math.round((z + delta) * 100) / 100)));
   }, []);
 
+  const addHighlight = useCallback((h: PageHighlight) => {
+    setHighlights((prev) => [...prev, h]);
+    setMarkedFlash(true);
+    window.setTimeout(() => setMarkedFlash(false), 900);
+  }, []);
+
+  const deleteHighlight = useCallback((id: string) => {
+    setHighlights((prev) => prev.filter((h) => h.id !== id));
+  }, []);
+
+  const addNote = useCallback((n: PageNote) => {
+    setNotes((prev) => [...prev, n]);
+  }, []);
+
+  const updateNote = useCallback((id: string, text: string) => {
+    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, text } : n)));
+  }, []);
+
+  const deleteNote = useCallback((id: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
   // Mobile / tablet: finger-follow drag + half-page taps via gesture layer
   const onGesturePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
+      if (annotateMode) return;
       if (!touchPrimary || !readyRef.current) return;
       const flip = flipRef.current;
       if (!flip) return;
@@ -447,11 +501,12 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         // Synthetic / non-capturable pointers (e.g. test harness)
       }
     },
-    [touchPrimary],
+    [touchPrimary, annotateMode],
   );
 
   const onGesturePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
+      if (annotateMode) return;
       const gesture = gestureRef.current;
       const flip = flipRef.current;
       if (!gesture || !flip || gesture.pointerId !== e.pointerId) return;
@@ -469,11 +524,15 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         flip.userMove(pos, true);
       }
     },
-    [],
+    [annotateMode],
   );
 
   const endGesture = useCallback(
     (e: React.PointerEvent<HTMLDivElement>, cancelled = false) => {
+      if (annotateMode) {
+        gestureRef.current = null;
+        return;
+      }
       const gesture = gestureRef.current;
       const flip = flipRef.current;
       if (!gesture || gesture.pointerId !== e.pointerId) return;
@@ -525,7 +584,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         else flip.flipNext(CORNER_BOTTOM as never);
       }
     },
-    [canAnimateFlip],
+    [canAnimateFlip, annotateMode],
   );
 
   // Keyboard navigation (desktop-primary; still works on touch devices with keyboards)
@@ -533,7 +592,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     const onKey = (e: KeyboardEvent) => {
       if (!readyRef.current) return;
       const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (annotateMode) return;
 
       if (e.key === "ArrowRight" || e.key === " " || e.code === "Space") {
         e.preventDefault();
@@ -553,7 +613,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goNext, goPrev, bumpZoom]);
+  }, [goNext, goPrev, bumpZoom, annotateMode]);
 
   // Block background page scroll while the reader is open
   useEffect(() => {
@@ -591,10 +651,10 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const pageLabel = `${pageIndex + 1} / ${doc.pageCount}`;
 
   return (
-    <div className={`reader-shell ${touchPrimary ? "is-touch" : "is-desktop"}`}>
+    <div className={`reader-shell ${touchPrimary ? "is-touch" : "is-desktop"} ${annotateMode ? "is-annotate" : ""}`}>
       <div
         className={`reader-controls absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-3 py-3 sm:px-4 ${
-          chromeVisible ? "visible-chrome" : "hidden-chrome"
+          chromeVisible || annotateMode ? "visible-chrome" : "hidden-chrome"
         }`}
       >
         <div className="min-w-0 border-[3px] border-black bg-lime px-3 py-2 shadow-[4px_4px_0_#000]">
@@ -604,8 +664,23 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
               Continue from page {resumeHint}
             </p>
           ) : null}
+          {markedFlash ? (
+            <p className="font-mono-label text-[9px] text-black/80">marked ✨</p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setAnnotateMode((v) => !v)}
+            className={`border-[3px] border-black px-3 py-2 font-display text-sm shadow-[3px_3px_0_#000] ${
+              annotateMode ? "bg-pink text-white" : "bg-white text-black"
+            }`}
+            aria-pressed={annotateMode}
+            aria-label={annotateMode ? "Exit annotate mode" : "Enter annotate mode"}
+            title={annotateMode ? "Done annotating" : "Annotate"}
+          >
+            {annotateMode ? "Done" : "Annotate"}
+          </button>
           <div className="flex items-center border-[3px] border-black bg-white shadow-[3px_3px_0_#000]">
             <button
               type="button"
@@ -659,6 +734,19 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         </div>
       </div>
 
+      {annotateMode ? (
+        <div className="annotation-toolbar-wrap absolute inset-x-0 top-[4.5rem] z-20 flex justify-center px-3">
+          <AnnotationToolbar
+            tool={annotTool}
+            color={annotColor}
+            vibe={annotVibe}
+            onTool={setAnnotTool}
+            onColor={setAnnotColor}
+            onVibe={setAnnotVibe}
+          />
+        </div>
+      ) : null}
+
       <div className="reader-stage">
         {!ready && !error ? (
           <div className="pointer-events-none absolute z-10 border-[3px] border-black bg-lime px-4 py-3 font-display text-sm text-black shadow-[4px_4px_0_#000]">
@@ -671,7 +759,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           </p>
         ) : null}
 
-        {!touchPrimary && ready ? (
+        {!touchPrimary && ready && !annotateMode ? (
           <button
             type="button"
             onClick={goPrev}
@@ -693,7 +781,26 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         >
           <div key={layoutKey} ref={hostRef} className="h-full w-full" />
 
-          {touchPrimary && ready ? (
+          {ready ? (
+            <AnnotationLayer
+              active={annotateMode}
+              tool={annotTool}
+              color={annotColor}
+              vibe={annotVibe}
+              pageIndex={pageIndex}
+              isNarrow={isNarrow}
+              hostRef={hostRef}
+              highlights={highlights}
+              notes={notes}
+              onAddHighlight={addHighlight}
+              onAddNote={addNote}
+              onUpdateNote={updateNote}
+              onDeleteNote={deleteNote}
+              onDeleteHighlight={deleteHighlight}
+            />
+          ) : null}
+
+          {touchPrimary && ready && !annotateMode ? (
             <div
               className="reader-gesture-layer"
               onPointerDown={onGesturePointerDown}
@@ -708,7 +815,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           ) : null}
         </div>
 
-        {!touchPrimary && ready ? (
+        {!touchPrimary && ready && !annotateMode ? (
           <button
             type="button"
             onClick={goNext}
@@ -741,11 +848,11 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
 
       <div
         className={`reader-controls absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2 px-4 py-4 ${
-          chromeVisible ? "visible-chrome" : "hidden-chrome"
+          chromeVisible || annotateMode ? "visible-chrome" : "hidden-chrome"
         }`}
       >
         <div className="flex items-center gap-0 border-[3px] border-black bg-white shadow-[5px_5px_0_#c8f542]">
-          {!touchPrimary ? (
+          {!touchPrimary && !annotateMode ? (
             <button
               type="button"
               onClick={goPrev}
@@ -789,7 +896,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             </button>
           )}
 
-          {!touchPrimary ? (
+          {!touchPrimary && !annotateMode ? (
             <button
               type="button"
               onClick={goNext}

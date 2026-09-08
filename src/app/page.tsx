@@ -45,7 +45,11 @@ export default function HomePage() {
 
   const openFilePicker = useCallback(() => {
     setPrepareError(null);
-    fileInputRef.current?.click();
+    const input = fileInputRef.current;
+    if (!input) return;
+    // Allow re-selecting the same file; keep input in the DOM for hydration.
+    input.value = "";
+    input.click();
   }, []);
 
   const openUploadModal = useCallback(() => {
@@ -111,7 +115,7 @@ export default function HomePage() {
         ref={fileInputRef}
         type="file"
         accept="application/pdf,.pdf"
-        className="sr-only"
+        className="bookly-file-input"
         onChange={onNativeFile}
         aria-hidden
         tabIndex={-1}
@@ -120,7 +124,17 @@ export default function HomePage() {
       <Header onUpload={openFilePicker} onInstall={() => setInstallOpen(true)} />
 
       <main>
-        <section className="border-b-[3px] border-black bg-black text-white">
+        <section
+          className="border-b-[3px] border-black bg-black text-white"
+          onDragOver={(e) => {
+            e.preventDefault();
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const file = e.dataTransfer.files?.[0];
+            if (file) void handleFile(file);
+          }}
+        >
           <div className="bookly-container grid items-center gap-12 py-14 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 lg:py-16">
             <div className="max-w-2xl">
               <span className="nb-tag">PDF only · Simple · Private</span>
@@ -173,32 +187,6 @@ export default function HomePage() {
             <div className="justify-self-center lg:justify-self-end">
               <HeroBook />
             </div>
-          </div>
-        </section>
-
-        <section
-          className="border-b-[3px] border-black bg-cream px-4 py-10"
-          onDragOver={(e) => {
-            e.preventDefault();
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            const file = e.dataTransfer.files?.[0];
-            if (file) void handleFile(file);
-          }}
-        >
-          <div className="bookly-container">
-            <button
-              type="button"
-              onClick={openUploadModal}
-              className="flex w-full flex-col items-center justify-center border-[3px] border-dashed border-black bg-white px-6 py-10 text-center shadow-[6px_6px_0_#000]"
-            >
-              <span className="mb-3 flex h-12 w-12 items-center justify-center border-[3px] border-black bg-blue font-display text-2xl text-white shadow-[3px_3px_0_#000]">
-                +
-              </span>
-              <p className="font-display text-xl text-black">Drop your PDF here</p>
-              <p className="mt-2 font-mono-label text-[10px] text-black/50">or click to choose</p>
-            </button>
           </div>
         </section>
 
@@ -294,10 +282,42 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="bg-cream py-10">
-        <div className="bookly-container flex flex-col items-center gap-2 text-center">
-          <p className="font-display text-lg text-black">Bookly © 2026</p>
-          <p className="font-mono-label text-[10px] text-black/50">PDF → Book · Local only</p>
+      <footer className="border-t-[3px] border-black bg-cream py-10">
+        <div className="bookly-container flex flex-col items-center gap-5 text-center">
+          <div>
+            <p className="font-display text-lg text-black">Bookly © 2026</p>
+            <p className="mt-1 font-mono-label text-[10px] text-black/50">PDF → Book · Local only</p>
+          </div>
+          <div className="border-[3px] border-black bg-white px-4 py-3 shadow-[4px_4px_0_#000]">
+            <p className="font-mono-label text-[9px] font-bold text-black/55">Built by</p>
+            <p className="mt-1 font-display text-base text-black">NITIN YADAV</p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <a
+              href="https://www.linkedin.com/in/nitin-yadav-681850299/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nb-social-link bg-blue text-white"
+            >
+              LinkedIn
+            </a>
+            <a
+              href="https://github.com/nitinyadav2188"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nb-social-link bg-black text-white"
+            >
+              GitHub
+            </a>
+            <a
+              href="https://x.com/nitindotdev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nb-social-link bg-lime text-black"
+            >
+              X · @nitindotdev
+            </a>
+          </div>
         </div>
       </footer>
 

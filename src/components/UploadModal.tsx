@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 type UploadModalProps = {
   open: boolean;
@@ -10,6 +10,7 @@ type UploadModalProps = {
 
 export function UploadModal({ open, onClose, onFile }: UploadModalProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId();
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +33,15 @@ export function UploadModal({ open, onClose, onFile }: UploadModalProps) {
     },
     [onFile],
   );
+
+  const openPicker = useCallback(() => {
+    setError(null);
+    const input = inputRef.current;
+    if (!input) return;
+    // Reset so choosing the same file again still fires change
+    input.value = "";
+    input.click();
+  }, []);
 
   if (!open) return null;
 
@@ -62,7 +72,7 @@ export function UploadModal({ open, onClose, onFile }: UploadModalProps) {
           </button>
         </div>
 
-        <label
+        <div
           onDragEnter={(e) => {
             e.preventDefault();
             setDragOver(true);
@@ -80,15 +90,16 @@ export function UploadModal({ open, onClose, onFile }: UploadModalProps) {
             setDragOver(false);
             acceptFile(e.dataTransfer.files?.[0]);
           }}
-          className={`flex cursor-pointer flex-col items-center justify-center border-[3px] border-dashed border-black px-6 py-12 text-center transition ${
+          className={`flex flex-col items-center justify-center border-[3px] border-dashed border-black px-6 py-12 text-center transition ${
             dragOver ? "bg-lime" : "bg-white"
           }`}
         >
           <input
+            id={inputId}
             ref={inputRef}
             type="file"
             accept="application/pdf,.pdf"
-            className="sr-only"
+            className="bookly-file-input"
             onChange={(e) => {
               acceptFile(e.target.files?.[0]);
               e.target.value = "";
@@ -99,8 +110,10 @@ export function UploadModal({ open, onClose, onFile }: UploadModalProps) {
           </span>
           <p className="font-display text-xl text-black">Drop your PDF here</p>
           <p className="mt-2 font-mono-label text-[10px] text-black/50">or</p>
-          <span className="nb-btn nb-btn-lime mt-4 text-sm">Choose PDF</span>
-        </label>
+          <button type="button" onClick={openPicker} className="nb-btn nb-btn-lime mt-4 text-sm">
+            Choose PDF
+          </button>
+        </div>
 
         {error ? (
           <p className="mt-3 border-[3px] border-black bg-pink px-3 py-2 font-display text-sm text-white">
