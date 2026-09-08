@@ -7,6 +7,7 @@ import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { AnnotationLayer, AnnotationToolbar } from "@/components/AnnotationLayer";
 import {
+  createAnnotationHistory,
   loadAnnotations,
   saveAnnotations,
   type HighlightColor,
@@ -141,10 +142,27 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const [notes, setNotes] = useState<PageNote[]>([]);
   const [markedFlash, setMarkedFlash] = useState(false);
   const [annotsHydrated, setAnnotsHydrated] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const historyRef = useRef(createAnnotationHistory());
+  const annotsRef = useRef({ highlights, notes });
+  const noteEditBatchRef = useRef<Set<string>>(new Set());
 
   soundOnRef.current = soundOn;
   zoomRef.current = zoom;
   readyRef.current = ready;
+  annotsRef.current = { highlights, notes };
+
+  const syncHistoryFlags = useCallback(() => {
+    setCanUndo(historyRef.current.canUndo());
+    setCanRedo(historyRef.current.canRedo());
+  }, []);
+
+  const pushAnnotHistory = useCallback(() => {
+    historyRef.current.push(annotsRef.current);
+    noteEditBatchRef.current.clear();
+    syncHistoryFlags();
+  }, [syncHistoryFlags]);
 
   useEffect(() => {
     setAnnotsHydrated(false);
@@ -152,6 +170,10 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     setHighlights(data.highlights);
     setNotes(data.notes);
     setAnnotateMode(false);
+    historyRef.current.clear();
+    noteEditBatchRef.current.clear();
+    setCanUndo(false);
+    setCanRedo(false);
     setAnnotsHydrated(true);
   }, [doc.id]);
 
@@ -283,13 +305,22 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         const host = hostRef.current;
         const measure = () => {
           const z = zoomRef.current || 1;
-          const availW = Math.max(0, host.clientWidth / z);
-          const availH = Math.max(0, host.clientHeight / z);
+          let availW = Math.max(0, host.clientWidth / z);
+          let availH = Math.max(0, host.clientHeight / z);
+          // Fallback if a wrapper collapsed % sizing (host 0×0) — use stage box.
+          if (availW < 80 || availH < 80) {
+            const stage = host.closest(".reader-stage") as HTMLElement | null;
+            if (stage) {
+              const pad = 24;
+              availW = Math.max(availW, (stage.clientWidth - pad) / z);
+              availH = Math.max(availH, (stage.clientHeight - pad) / z);
+            }
+          }
           // Desktop: fill the open-book frame more aggressively; touch stays compact.
           const widthDivisor = isNarrow ? 1.08 : touchPrimary ? 2.15 : 2.02;
           const pageWidth = Math.min(
             touchPrimary ? 560 : 640,
-            Math.max(240, Math.floor(availW / widthDivisor)),
+            Math.max(160, Math.floor(availW / widthDivisor)),
           );
           const pageHeight = Math.min(
             Math.floor(availH * (touchPrimary ? 0.92 : 0.96)),
@@ -303,7 +334,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         const layoutReady = (async () => {
           for (let attempt = 0; attempt < 40; attempt += 1) {
             const m = measure();
-            if (m.availW >= 80 && m.availH >= 80 && m.pageWidth >= 120 && m.pageHeight >= 160) {
+            if (m.availW >= 80 && m.availH >= 80 && m.pageWidth >= 120 && m.pageHeight >= 140) {
               return m;
             }
             await new Promise<void>((r) => requestAnimationFrame(() => r()));
@@ -476,27 +507,70 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     setZoom((z) => Math.min(1.6, Math.max(0.7, Math.round((z + delta) * 100) / 100)));
   }, []);
 
-  const addHighlight = useCallback((h: PageHighlight) => {
-    setHighlights((prev) => [...prev, h]);
-    setMarkedFlash(true);
-    window.setTimeout(() => setMarkedFlash(false), 900);
-  }, []);
+  const addHighlight = useCallback(
+    (h: PageHighlight) => {
+      pushAnnotHistory();
+      setHighlights((prev) => [...prev, h]);
+      setMarkedFlash(true);
+      window.setTimeout(() => setMarkedFlash(false), 900);
+    },
+    [pushAnnotHistory],
+  );
 
-  const deleteHighlight = useCallback((id: string) => {
-    setHighlights((prev) => prev.filter((h) => h.id !== id));
-  }, []);
+  const deleteHighlight = useCallback(
+    (id: string) => {
+      pushAnnotHistory();
+      setHighlights((prev) => prev.filter((h) => h.id !== id));
+    },
+    [pushAnnotHistory],
+  );
 
-  const addNote = useCallback((n: PageNote) => {
-    setNotes((prev) => [...prev, n]);
-  }, []);
+  const addNote = useCallback(
+    (n: PageNote) => {
+      pushAnnotHistory();
+      setNotes((prev) => [...prev, n]);
+    },
+    [pushAnnotHistory],
+  );
 
-  const updateNote = useCallback((id: string, text: string) => {
-    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, text } : n)));
-  }, []);
+  const updateNote = useCallback(
+    (id: string, text: string) => {
+      // Coalesce keystrokes for one sticky into a single undo step.
+      if (!noteEditBatchRef.current.has(id)) {
+        historyRef.current.push(annotsRef.current);
+        noteEditBatchRef.current.add(id);
+        syncHistoryFlags();
+      }
+      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, text } : n)));
+    },
+    [syncHistoryFlags],
+  );
 
-  const deleteNote = useCallback((id: string) => {
-    setNotes((prev) => prev.filter((n) => n.id !== id));
-  }, []);
+  const deleteNote = useCallback(
+    (id: string) => {
+      pushAnnotHistory();
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+    },
+    [pushAnnotHistory],
+  );
+
+  const undoAnnot = useCallback(() => {
+    const next = historyRef.current.undo(annotsRef.current);
+    if (!next) return;
+    noteEditBatchRef.current.clear();
+    setHighlights(next.highlights);
+    setNotes(next.notes);
+    syncHistoryFlags();
+  }, [syncHistoryFlags]);
+
+  const redoAnnot = useCallback(() => {
+    const next = historyRef.current.redo(annotsRef.current);
+    if (!next) return;
+    noteEditBatchRef.current.clear();
+    setHighlights(next.highlights);
+    setNotes(next.notes);
+    syncHistoryFlags();
+  }, [syncHistoryFlags]);
 
   // Mobile / tablet: finger-follow drag + half-page taps via gesture layer
   const onGesturePointerDown = useCallback(
@@ -635,7 +709,23 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     const onKey = (e: KeyboardEvent) => {
       if (!readyRef.current) return;
       const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+
+      if (annotateMode && (e.metaKey || e.ctrlKey)) {
+        const key = e.key.toLowerCase();
+        if (key === "z" && !e.shiftKey) {
+          e.preventDefault();
+          undoAnnot();
+          return;
+        }
+        if (key === "y" || (key === "z" && e.shiftKey)) {
+          e.preventDefault();
+          redoAnnot();
+          return;
+        }
+      }
+
+      if (typing) return;
       if (annotateMode) return;
 
       if (e.key === "ArrowRight" || e.key === " " || e.code === "Space") {
@@ -656,7 +746,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goNext, goPrev, bumpZoom, annotateMode]);
+  }, [goNext, goPrev, bumpZoom, annotateMode, undoAnnot, redoAnnot]);
 
   // Block background page scroll while the reader is open
   useEffect(() => {
@@ -783,9 +873,13 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             tool={annotTool}
             color={annotColor}
             vibe={annotVibe}
+            canUndo={canUndo}
+            canRedo={canRedo}
             onTool={setAnnotTool}
             onColor={setAnnotColor}
             onVibe={setAnnotVibe}
+            onUndo={undoAnnot}
+            onRedo={redoAnnot}
           />
         </div>
       ) : null}
@@ -814,7 +908,12 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           </button>
         ) : null}
 
-        <div className={touchPrimary ? undefined : "reader-book-frame"}>
+        {/*
+          Desktop wraps in .reader-book-frame for the cradle chrome.
+          Touch must NOT use an unsized wrapper — a bare <div> collapses
+          percentage width/height to 0 and PageFlip fails with "Could not size".
+        */}
+        <div className={touchPrimary ? "reader-touch-frame" : "reader-book-frame"}>
           <div
             className={`reader-book-host ${ready ? "is-ready" : ""}`}
             style={{

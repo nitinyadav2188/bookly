@@ -370,57 +370,91 @@ export function AnnotationToolbar({
   tool,
   color,
   vibe,
+  canUndo,
+  canRedo,
   onTool,
   onColor,
   onVibe,
+  onUndo,
+  onRedo,
 }: {
   tool: Tool;
   color: HighlightColor;
   vibe: NoteVibe;
+  canUndo: boolean;
+  canRedo: boolean;
   onTool: (t: Tool) => void;
   onColor: (c: HighlightColor) => void;
   onVibe: (v: NoteVibe) => void;
+  onUndo: () => void;
+  onRedo: () => void;
 }) {
   return (
     <div className="annotation-toolbar">
-      <button
-        type="button"
-        className={tool === "highlight" ? "is-on" : ""}
-        onClick={() => onTool("highlight")}
-      >
-        Highlight
-      </button>
-      <button
-        type="button"
-        className={tool === "note" ? "is-on" : ""}
-        onClick={() => onTool("note")}
-      >
-        Sticky
-      </button>
-      {tool === "highlight" ? (
-        <div className="annotation-swatches" role="group" aria-label="Highlighter color">
-          {HIGHLIGHT_COLORS.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className={`swatch swatch-${c.id} ${color === c.id ? "is-on" : ""}`}
-              aria-label={c.label}
-              onClick={() => onColor(c.id)}
-            />
-          ))}
-        </div>
-      ) : (
-        <label className="annotation-vibe">
-          <span className="sr-only">Note vibe</span>
-          <select value={vibe} onChange={(e) => onVibe(e.target.value as NoteVibe)}>
-            {NOTE_VIBES.map((v) => (
-              <option key={v} value={v}>
-                {v === "tea" ? "tea ☕" : v}
-              </option>
+      <div className="annotation-toolbar-row" role="group" aria-label="Annotate tools">
+        <button
+          type="button"
+          className={`annot-tool annot-tool-highlight ${tool === "highlight" ? "is-on" : ""}`}
+          onClick={() => onTool("highlight")}
+          aria-pressed={tool === "highlight"}
+        >
+          Highlight
+        </button>
+        <button
+          type="button"
+          className={`annot-tool annot-tool-note ${tool === "note" ? "is-on" : ""}`}
+          onClick={() => onTool("note")}
+          aria-pressed={tool === "note"}
+        >
+          Sticky
+        </button>
+        {tool === "highlight" ? (
+          <div className="annotation-swatches" role="group" aria-label="Highlighter color">
+            {HIGHLIGHT_COLORS.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`swatch swatch-${c.id} ${color === c.id ? "is-on" : ""}`}
+                aria-label={c.label}
+                aria-pressed={color === c.id}
+                onClick={() => onColor(c.id)}
+              />
             ))}
-          </select>
-        </label>
-      )}
+          </div>
+        ) : (
+          <label className="annotation-vibe">
+            <span className="sr-only">Note vibe</span>
+            <select value={vibe} onChange={(e) => onVibe(e.target.value as NoteVibe)}>
+              {NOTE_VIBES.map((v) => (
+                <option key={v} value={v}>
+                  {v === "tea" ? "tea ☕" : v}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <span className="annotation-toolbar-divider" aria-hidden />
+        <button
+          type="button"
+          className="annot-tool annot-tool-undo"
+          onClick={onUndo}
+          disabled={!canUndo}
+          aria-label="Undo annotation"
+          title="Undo"
+        >
+          Undo
+        </button>
+        <button
+          type="button"
+          className="annot-tool annot-tool-redo"
+          onClick={onRedo}
+          disabled={!canRedo}
+          aria-label="Redo annotation"
+          title="Redo"
+        >
+          Redo
+        </button>
+      </div>
       <p className="annotation-hint">
         {tool === "highlight" ? "Drag to mark ✨" : "Tap page · keep it short"}
       </p>

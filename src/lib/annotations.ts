@@ -69,3 +69,52 @@ export function saveAnnotations(documentId: string, data: DocAnnotations): void 
 export function makeAnnotId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
+
+export const ANNOT_HISTORY_LIMIT = 50;
+
+export function cloneAnnotations(data: DocAnnotations): DocAnnotations {
+  return {
+    highlights: data.highlights.map((h) => ({ ...h })),
+    notes: data.notes.map((n) => ({ ...n })),
+  };
+}
+
+/** Snapshot stack for undo / redo of annotation mutations. */
+export function createAnnotationHistory(limit = ANNOT_HISTORY_LIMIT) {
+  let past: DocAnnotations[] = [];
+  let future: DocAnnotations[] = [];
+
+  return {
+    clear() {
+      past = [];
+      future = [];
+    },
+    canUndo() {
+      return past.length > 0;
+    },
+    canRedo() {
+      return future.length > 0;
+    },
+    /** Record current state before applying a mutation. Clears redo branch. */
+    push(current: DocAnnotations) {
+      past = [...past, cloneAnnotations(current)].slice(-limit);
+      future = [];
+    },
+    undo(current: DocAnnotations): DocAnnotations | null {
+      if (past.length === 0) return null;
+      const prev = past[past.length - 1];
+      past = past.slice(0, -1);
+      future = [...future, cloneAnnotations(current)];
+      return cloneAnnotations(prev);
+    },
+    redo(current: DocAnnotations): DocAnnotations | null {
+      if (future.length === 0) return null;
+      const next = future[future.length - 1];
+      future = future.slice(0, -1);
+      past = [...past, cloneAnnotations(current)];
+      return cloneAnnotations(next);
+    },
+  };
+}
+
+export type AnnotationHistory = ReturnType<typeof createAnnotationHistory>;
