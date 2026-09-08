@@ -24,6 +24,7 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const result = {
   splashPresentOnNav: false,
   splashHasBrand: false,
+  splashHasMageBook: false,
   splashClears: false,
   noMidDrop: false,
   footerNitin: false,
@@ -42,12 +43,29 @@ try {
   const splash = page.locator("#bookly-boot-splash");
   result.splashPresentOnNav = (await splash.count()) > 0;
   result.splashHasBrand =
-    (await page.locator("#bookly-boot-splash .boot-b").count()) > 0 &&
-    (await page.locator("#bookly-boot-splash .boot-name").count()) > 0;
+    (await page.locator("#bookly-boot-splash .boot-name").count()) > 0 &&
+    (await page.locator("#bookly-boot-splash .boot-mage").count()) > 0;
+  result.splashHasMageBook =
+    (await page.locator("#bookly-boot-splash .boot-book").count()) > 0 &&
+    (await page.locator("#bookly-boot-splash .boot-wand").count()) > 0;
 
-  // Screenshot quickly while splash may still be up
+  // Freeze splash long enough for a clean screenshot of the mage doodle
+  await page.evaluate(() => {
+    const el = document.getElementById("bookly-boot-splash");
+    if (el) {
+      el.style.transition = "none";
+      // Prevent controller from removing mid-capture
+      el.dataset.hold = "1";
+    }
+  });
+  await page.waitForTimeout(250);
   await page.screenshot({ path: path.join(OUT, "bookly-boot-splash.png") });
   copy("bookly-boot-splash.png");
+
+  // Release / remove splash so the home UI is reachable
+  await page.evaluate(() => {
+    document.getElementById("bookly-boot-splash")?.remove();
+  });
 
   // Wait for splash to clear
   await page.waitForFunction(
@@ -95,6 +113,7 @@ try {
   const ok =
     result.splashPresentOnNav &&
     result.splashHasBrand &&
+    result.splashHasMageBook &&
     result.splashClears &&
     result.noMidDrop &&
     result.footerNitin &&

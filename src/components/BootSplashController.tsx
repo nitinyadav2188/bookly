@@ -2,17 +2,29 @@
 
 import { useEffect } from "react";
 
-const MIN_MS = 420;
-const MAX_MS = 780;
+const MIN_MS = 1000;
+const MAX_MS = 1200;
+const REDUCED_MIN_MS = 180;
+const REDUCED_MAX_MS = 320;
 
 /**
  * Hides the SSR boot splash once the app is hydrated / ready.
  * Splash markup lives in layout for first paint (no blank flash).
+ * Holds ~1–1.2s (or fonts-ready + min), shorter with prefers-reduced-motion.
  */
 export function BootSplashController() {
   useEffect(() => {
     const el = document.getElementById("bookly-boot-splash");
     if (!el) return;
+
+    const reduced =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const minMs = reduced ? REDUCED_MIN_MS : MIN_MS;
+    const maxMs = reduced ? REDUCED_MAX_MS : MAX_MS;
+
+    if (reduced) el.classList.add("is-reduced");
 
     const started = performance.now();
     let finished = false;
@@ -21,7 +33,7 @@ export function BootSplashController() {
       if (finished) return;
       finished = true;
       const elapsed = performance.now() - started;
-      const wait = Math.max(0, MIN_MS - elapsed);
+      const wait = Math.max(0, minMs - elapsed);
       window.setTimeout(() => {
         el.classList.add("is-done");
         const remove = () => {
@@ -33,22 +45,20 @@ export function BootSplashController() {
     };
 
     const ready = () => {
-      // Prefer fonts if available, but never stall past MAX_MS
       const fontsReady =
         "fonts" in document
           ? document.fonts.ready.then(() => undefined).catch(() => undefined)
           : Promise.resolve();
       void Promise.race([
         fontsReady,
-        new Promise<void>((r) => window.setTimeout(r, MAX_MS - MIN_MS)),
+        new Promise<void>((r) => window.setTimeout(r, Math.max(0, maxMs - minMs))),
       ]).then(finish);
     };
 
     if (document.readyState === "complete") ready();
     else window.addEventListener("load", ready, { once: true });
 
-    // Absolute ceiling so splash never sticks
-    const hard = window.setTimeout(finish, MAX_MS);
+    const hard = window.setTimeout(finish, maxMs);
     return () => window.clearTimeout(hard);
   }, []);
 
