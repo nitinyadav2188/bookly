@@ -157,9 +157,9 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
 
         const host = hostRef.current;
         const measure = () => {
-          const z = zoomRef.current;
-          const availW = host.clientWidth / z;
-          const availH = host.clientHeight / z;
+          const z = zoomRef.current || 1;
+          const availW = Math.max(0, host.clientWidth / z);
+          const availH = Math.max(0, host.clientHeight / z);
           const pageWidth = Math.min(
             560,
             Math.max(240, Math.floor(availW / (isNarrow ? 1.08 : 2.15))),
@@ -168,10 +168,27 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             Math.floor(availH * 0.92),
             Math.floor(pageWidth * 1.38),
           );
-          return { pageWidth, pageHeight };
+          return { pageWidth, pageHeight, availW, availH };
         };
 
-        const { pageWidth, pageHeight } = measure();
+        // Wait until the reader host has real layout (viewport flips can be 0×0 briefly)
+        let pageWidth = 0;
+        let pageHeight = 0;
+        for (let attempt = 0; attempt < 30; attempt += 1) {
+          const m = measure();
+          if (m.availW >= 80 && m.availH >= 80 && m.pageWidth >= 120 && m.pageHeight >= 160) {
+            pageWidth = m.pageWidth;
+            pageHeight = m.pageHeight;
+            break;
+          }
+          await new Promise((r) => window.setTimeout(r, 50));
+          if (cancelled || !hostRef.current) return;
+        }
+        if (pageWidth < 120 || pageHeight < 160) {
+          setError("Could not size the book for this screen.");
+          setStatus("");
+          return;
+        }
 
         ignoreSoundUntilRef.current = Date.now() + 900;
 
