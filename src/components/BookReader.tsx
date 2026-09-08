@@ -80,6 +80,22 @@ function clientToBookPos(flip: PageFlip, clientX: number, clientY: number): Gest
   return { x: clientX - rect.left, y: clientY - rect.top };
 }
 
+/**
+ * StPageFlip's flipPrev() passes x:10, which fails disableFlipByClick corner checks
+ * in portrait (bounds.left is negative). Pass a real left-edge corner instead.
+ */
+function animateFlip(flip: PageFlip, direction: "prev" | "next") {
+  if (direction === "next") {
+    flip.flipNext(CORNER_BOTTOM as never);
+    return;
+  }
+  const rect = flip.getBoundsRect();
+  flip.getFlipController().flip({
+    x: rect.left + 10,
+    y: rect.height - 2,
+  });
+}
+
 export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const pagesRef = useRef<HTMLDivElement>(null);
@@ -210,13 +226,13 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   }, []);
 
   const goPrev = useCallback(() => {
-    if (!canAnimateFlip()) return;
-    flipRef.current?.flipPrev(CORNER_BOTTOM as never);
+    if (!canAnimateFlip() || !flipRef.current) return;
+    animateFlip(flipRef.current, "prev");
   }, [canAnimateFlip]);
 
   const goNext = useCallback(() => {
-    if (!canAnimateFlip()) return;
-    flipRef.current?.flipNext(CORNER_BOTTOM as never);
+    if (!canAnimateFlip() || !flipRef.current) return;
+    animateFlip(flipRef.current, "next");
   }, [canAnimateFlip]);
 
   useEffect(() => {
@@ -590,8 +606,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       if (isSwipe) {
         if (gesture.folding) flip.userStop(pos, false);
         if (flip.getState() === "flipping") return;
-        if (dx < 0) flip.flipNext(CORNER_BOTTOM as never);
-        else flip.flipPrev(CORNER_BOTTOM as never);
+        animateFlip(flip, dx < 0 ? "next" : "prev");
         return;
       }
 
@@ -605,8 +620,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       if (!gesture.moved && canAnimateFlip()) {
         const layer = e.currentTarget.getBoundingClientRect();
         const mid = layer.left + layer.width / 2;
-        if (e.clientX < mid) flip.flipPrev(CORNER_BOTTOM as never);
-        else flip.flipNext(CORNER_BOTTOM as never);
+        animateFlip(flip, e.clientX < mid ? "prev" : "next");
       }
     },
     [canAnimateFlip, annotateMode],
