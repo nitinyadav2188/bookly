@@ -2,15 +2,15 @@
 
 import { useEffect } from "react";
 
-const MIN_MS = 1000;
-const MAX_MS = 1200;
-const REDUCED_MIN_MS = 180;
-const REDUCED_MAX_MS = 320;
+const MIN_MS = 420;
+const MAX_MS = 780;
+const REDUCED_MIN_MS = 120;
+const REDUCED_MAX_MS = 280;
 
 /**
  * Hides the SSR boot splash once the app is hydrated / ready.
  * Splash markup lives in layout for first paint (no blank flash).
- * Holds ~1–1.2s (or fonts-ready + min), shorter with prefers-reduced-motion.
+ * Holds ~0.4–0.8s (or fonts-ready + min), shorter with prefers-reduced-motion.
  */
 export function BootSplashController() {
   useEffect(() => {

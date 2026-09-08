@@ -2,49 +2,38 @@
 
 import { useEffect, useState } from "react";
 import {
+  getApkAvailableCached,
   getPlatformHint,
   isStandaloneDisplay,
   promptPwaInstall,
+  subscribeApkAvailable,
   subscribeInstallPrompt,
+  triggerApkDownload,
 } from "@/lib/install";
 
 type InstallModalProps = {
   open: boolean;
   onClose: () => void;
+  /** When true, modal is the A2HS fallback after Install couldn't prompt/download. */
+  fallbackOnly?: boolean;
 };
 
-export function InstallModal({ open, onClose }: InstallModalProps) {
+export function InstallModal({ open, onClose, fallbackOnly = false }: InstallModalProps) {
   const [canPrompt, setCanPrompt] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
-  const [apkAvailable, setApkAvailable] = useState(false);
+  const [apkAvailable, setApkAvailable] = useState(() => getApkAvailableCached() === true);
   const platform = getPlatformHint();
   const standalone = typeof window !== "undefined" ? isStandaloneDisplay() : false;
 
   useEffect(() => {
     if (!open) return;
+    setStatus(null);
     return subscribeInstallPrompt((event) => setCanPrompt(Boolean(event)));
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
-    let cancelled = false;
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 1200);
-    fetch("/downloads/bookly.apk", { method: "HEAD", signal: controller.signal })
-      .then((res) => {
-        if (!cancelled) setApkAvailable(res.ok);
-      })
-      .catch(() => {
-        if (!cancelled) setApkAvailable(false);
-      })
-      .finally(() => {
-        window.clearTimeout(timer);
-      });
-    return () => {
-      cancelled = true;
-      controller.abort();
-      window.clearTimeout(timer);
-    };
+    return subscribeApkAvailable((available) => setApkAvailable(available));
   }, [open]);
 
   if (!open) return null;
@@ -62,10 +51,12 @@ export function InstallModal({ open, onClose }: InstallModalProps) {
           <div>
             <p className="font-mono-label text-[10px] font-bold text-black/60">Install</p>
             <h2 id="install-title" className="mt-1 font-display text-2xl text-black">
-              Install Bookly
+              {fallbackOnly ? "Add Bookly to home" : "Install Bookly"}
             </h2>
             <p className="mt-2 text-sm text-ink-muted">
-              Same private reader. Fullscreen. Home screen ready.
+              {fallbackOnly
+                ? "Quick steps so Bookly opens like an app."
+                : "Same private reader. Fullscreen. Home screen ready."}
             </p>
           </div>
           <button
@@ -80,7 +71,9 @@ export function InstallModal({ open, onClose }: InstallModalProps) {
 
         <div className="space-y-4">
           <section className="border-[3px] border-black bg-white p-4 shadow-[4px_4px_0_#000]">
-            <p className="font-mono-label text-[10px] font-bold text-black/60">Install on phone</p>
+            <p className="font-mono-label text-[10px] font-bold text-black/60">
+              {fallbackOnly ? "Add to Home Screen" : "Install on phone"}
+            </p>
             {standalone ? (
               <p className="mt-2 text-sm text-ink-muted">Bookly is already installed on this device.</p>
             ) : (
@@ -98,36 +91,54 @@ export function InstallModal({ open, onClose }: InstallModalProps) {
                       }
                     }}
                   >
-                    Add to home screen
+                    Install now
                   </button>
                 ) : (
-                  <div className="mt-2 space-y-2 text-sm text-ink-muted">
+                  <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-ink-muted">
                     {platform === "ios" ? (
-                      <p>
-                        Tap <strong className="text-black">Share</strong>, then{" "}
-                        <strong className="text-black">Add to Home Screen</strong>.
-                      </p>
+                      <>
+                        <li>
+                          Tap <strong className="text-black">Share</strong> in Safari
+                        </li>
+                        <li>
+                          Choose <strong className="text-black">Add to Home Screen</strong>
+                        </li>
+                        <li>
+                          Tap <strong className="text-black">Add</strong>
+                        </li>
+                      </>
                     ) : platform === "android" ? (
-                      <p>
-                        Open the browser menu →{" "}
-                        <strong className="text-black">Install app</strong> /{" "}
-                        <strong className="text-black">Add to Home screen</strong>.
-                      </p>
+                      <>
+                        <li>Open the browser menu (⋮)</li>
+                        <li>
+                          Tap <strong className="text-black">Install app</strong> or{" "}
+                          <strong className="text-black">Add to Home screen</strong>
+                        </li>
+                        <li>Confirm — Bookly appears on your home screen</li>
+                      </>
                     ) : (
-                      <p>Use the install icon in your address bar, or open Bookly on your phone.</p>
+                      <>
+                        <li>Look for the install icon in the address bar</li>
+                        <li>
+                          Or open Bookly on your phone and tap <strong className="text-black">Install</strong>
+                        </li>
+                      </>
                     )}
-                  </div>
+                  </ol>
                 )}
 
                 {apkAvailable ? (
-                  <a href="/downloads/bookly.apk" className="nb-btn nb-btn-blue mt-3 w-full text-sm">
+                  <button
+                    type="button"
+                    className="nb-btn nb-btn-blue mt-3 w-full text-sm"
+                    onClick={() => {
+                      triggerApkDownload();
+                      setStatus("Download started.");
+                    }}
+                  >
                     Download Android APK
-                  </a>
-                ) : (
-                  <p className="mt-3 font-mono-label text-[10px] text-black/45">
-                    APK via Capacitor — see README (`npm run android:build`)
-                  </p>
-                )}
+                  </button>
+                ) : null}
               </>
             )}
           </section>
@@ -137,11 +148,7 @@ export function InstallModal({ open, onClose }: InstallModalProps) {
             <p className="mt-2 text-sm text-black">
               No install needed. Upload a PDF and start reading — everything stays local.
             </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="nb-btn nb-btn-white mt-3 text-sm"
-            >
+            <button type="button" onClick={onClose} className="nb-btn nb-btn-white mt-3 text-sm">
               Continue in browser
             </button>
           </section>

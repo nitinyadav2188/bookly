@@ -7,9 +7,12 @@ import { UploadModal } from "@/components/UploadModal";
 import { InstallModal } from "@/components/InstallModal";
 import { PreparingBook } from "@/components/PreparingBook";
 import { BookReader } from "@/components/BookReader";
+import { SiteFooter } from "@/components/SiteFooter";
 import { openPdfFromFile, isPdfFile, PdfOpenError, warmPdfWorker, type OpenedPdf } from "@/lib/pdf";
 import {
   captureInstallPrompt,
+  startInstallFlow,
+  warmApkCheck,
   type BeforeInstallPromptEvent,
 } from "@/lib/install";
 
@@ -19,6 +22,7 @@ export default function HomePage() {
   const [screen, setScreen] = useState<Screen>("home");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
+  const [installFallback, setInstallFallback] = useState(false);
   const [bookDoc, setBookDoc] = useState<OpenedPdf | null>(null);
   const [prepareName, setPrepareName] = useState<string | undefined>();
   const [preparePhase, setPreparePhase] = useState<"preparing" | "rendering">("preparing");
@@ -36,11 +40,21 @@ export default function HomePage() {
 
   useEffect(() => {
     warmPdfWorker();
+    warmApkCheck();
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {
         // optional
       });
     }
+  }, []);
+
+  const handleInstall = useCallback(async () => {
+    const result = await startInstallFlow();
+    if (result === "fallback" || result === "standalone") {
+      setInstallFallback(result === "fallback");
+      setInstallOpen(true);
+    }
+    // prompted / downloaded: useful action already started — no modal.
   }, []);
 
   const openFilePicker = useCallback(() => {
@@ -121,7 +135,7 @@ export default function HomePage() {
         tabIndex={-1}
       />
 
-      <Header onUpload={openFilePicker} onInstall={() => setInstallOpen(true)} />
+      <Header onUpload={openFilePicker} onInstall={() => void handleInstall()} />
 
       <main>
         <section
@@ -152,7 +166,7 @@ export default function HomePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setInstallOpen(true)}
+                  onClick={() => void handleInstall()}
                   className="nb-btn nb-btn-blue text-sm"
                 >
                   Install Bookly
@@ -273,7 +287,7 @@ export default function HomePage() {
             </div>
             <button
               type="button"
-              onClick={() => setInstallOpen(true)}
+              onClick={() => void handleInstall()}
               className="nb-btn nb-btn-blue text-sm"
             >
               Install Bookly
@@ -282,47 +296,17 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t-[3px] border-black bg-cream py-10">
-        <div className="bookly-container flex flex-col items-center gap-5 text-center">
-          <div>
-            <p className="font-display text-lg text-black">Bookly © 2026</p>
-            <p className="mt-1 font-mono-label text-[10px] text-black/50">PDF → Book · Local only</p>
-          </div>
-          <div className="border-[3px] border-black bg-white px-4 py-3 shadow-[4px_4px_0_#000]">
-            <p className="font-mono-label text-[9px] font-bold text-black/55">Built by</p>
-            <p className="mt-1 font-display text-base text-black">NITIN YADAV</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <a
-              href="https://www.linkedin.com/in/nitin-yadav-681850299/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="nb-social-link bg-blue text-white"
-            >
-              LinkedIn
-            </a>
-            <a
-              href="https://github.com/nitinyadav2188"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="nb-social-link bg-black text-white"
-            >
-              GitHub
-            </a>
-            <a
-              href="https://x.com/nitindotdev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="nb-social-link bg-lime text-black"
-            >
-              X · @nitindotdev
-            </a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
 
       <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} onFile={handleFile} />
-      <InstallModal open={installOpen} onClose={() => setInstallOpen(false)} />
+      <InstallModal
+        open={installOpen}
+        fallbackOnly={installFallback}
+        onClose={() => {
+          setInstallOpen(false);
+          setInstallFallback(false);
+        }}
+      />
     </div>
   );
 }
