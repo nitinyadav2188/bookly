@@ -99,6 +99,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     startTime: number;
     moved: boolean;
     folding: boolean;
+    foldTimer: number | null;
+    foldArmed: boolean;
   } | null>(null);
 
   const isNarrow = useIsNarrow();
@@ -487,14 +489,21 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       if (e.pointerType === "mouse" && e.button !== 0) return;
 
       const startBook = clientToBookPos(flip, e.clientX, e.clientY);
-      gestureRef.current = {
+      const gesture = {
         pointerId: e.pointerId,
         startClient: { x: e.clientX, y: e.clientY },
         startBook,
         startTime: Date.now(),
         moved: false,
         folding: false,
+        foldTimer: null as number | null,
+        foldArmed: false,
       };
+      // Match StPageFlip: delay fold so a quick swipe never starts USER_FOLD
+      gesture.foldTimer = window.setTimeout(() => {
+        if (gestureRef.current === gesture) gesture.foldArmed = true;
+      }, SWIPE_TIMEOUT_MS);
+      gestureRef.current = gesture;
       try {
         e.currentTarget.setPointerCapture(e.pointerId);
       } catch {
@@ -514,15 +523,25 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       const dx = e.clientX - gesture.startClient.x;
       const dy = e.clientY - gesture.startClient.y;
       const dist = Math.hypot(dx, dy);
-      if (dist > DRAG_THRESHOLD) {
-        gesture.moved = true;
-        const pos = clientToBookPos(flip, e.clientX, e.clientY);
-        if (!gesture.folding) {
-          flip.startUserTouch(gesture.startBook);
-          gesture.folding = true;
-        }
-        flip.userMove(pos, true);
+      if (dist <= DRAG_THRESHOLD) return;
+
+      gesture.moved = true;
+      // Only finger-follow after the swipe window (or once armed)
+      if (!gesture.foldArmed && Date.now() - gesture.startTime < SWIPE_TIMEOUT_MS) {
+        return;
       }
+      gesture.foldArmed = true;
+      if (gesture.foldTimer != null) {
+        window.clearTimeout(gesture.foldTimer);
+        gesture.foldTimer = null;
+      }
+
+      const pos = clientToBookPos(flip, e.clientX, e.clientY);
+      if (!gesture.folding) {
+        flip.startUserTouch(gesture.startBook);
+        gesture.folding = true;
+      }
+      flip.userMove(pos, true);
     },
     [annotateMode],
   );
@@ -530,6 +549,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const endGesture = useCallback(
     (e: React.PointerEvent<HTMLDivElement>, cancelled = false) => {
       if (annotateMode) {
+        const g = gestureRef.current;
+        if (g?.foldTimer != null) window.clearTimeout(g.foldTimer);
         gestureRef.current = null;
         return;
       }
@@ -537,6 +558,11 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       const flip = flipRef.current;
       if (!gesture || gesture.pointerId !== e.pointerId) return;
       gestureRef.current = null;
+
+      if (gesture.foldTimer != null) {
+        window.clearTimeout(gesture.foldTimer);
+        gesture.foldTimer = null;
+      }
 
       try {
         e.currentTarget.releasePointerCapture(e.pointerId);
@@ -547,7 +573,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       if (!flip || cancelled) {
         if (flip && gesture.folding) {
           const pos = clientToBookPos(flip, e.clientX, e.clientY);
-          flip.userStop(pos, true);
+          flip.userStop(pos, false);
         }
         return;
       }
@@ -562,9 +588,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         elapsed < SWIPE_TIMEOUT_MS;
 
       if (isSwipe) {
-        // One swipe → at most one page; cancel any in-progress fold first
-        if (gesture.folding) flip.userStop(pos, true);
-        if (!canAnimateFlip()) return;
+        if (gesture.folding) flip.userStop(pos, false);
+        if (flip.getState() === "flipping") return;
         if (dx < 0) flip.flipNext(CORNER_BOTTOM as never);
         else flip.flipPrev(CORNER_BOTTOM as never);
         return;
