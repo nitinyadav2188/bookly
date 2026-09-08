@@ -29,7 +29,7 @@ function useTouchPrimary(breakpoint = 768) {
     return (
       window.matchMedia(`(max-width: ${breakpoint - 1}px)`).matches ||
       window.matchMedia("(pointer: coarse)").matches ||
-      window.matchMedia("(hover: none)").matches
+      window.matchMedia("(any-pointer: coarse)").matches
     );
   });
 
@@ -37,7 +37,7 @@ function useTouchPrimary(breakpoint = 768) {
     const queries = [
       window.matchMedia(`(max-width: ${breakpoint - 1}px)`),
       window.matchMedia("(pointer: coarse)"),
-      window.matchMedia("(hover: none)"),
+      window.matchMedia("(any-pointer: coarse)"),
     ];
     const update = () => {
       setTouchPrimary(queries.some((q) => q.matches));
@@ -441,7 +441,11 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         moved: false,
         folding: false,
       };
-      e.currentTarget.setPointerCapture(e.pointerId);
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // Synthetic / non-capturable pointers (e.g. test harness)
+      }
     },
     [touchPrimary],
   );
