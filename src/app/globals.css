@@ -425,13 +425,91 @@ body {
 }
 
 .reader-shell.is-desktop .reader-stage {
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
+  gap: 1.25rem;
+  padding: 1.25rem 1rem 1.75rem;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 48%, #2a241c 0%, transparent 72%),
+    linear-gradient(180deg, #0a0a0a 0%, #15110c 45%, #0d0d0d 100%);
+}
+
+.reader-shell.is-desktop .reader-book-frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: min(1180px, calc(100% - 8.5rem));
+  height: min(90vh, 100%);
+  padding: 0.85rem 1.1rem 1.15rem;
+}
+
+/* Soft desk / cradle under the open book */
+.reader-shell.is-desktop .reader-book-frame::before {
+  content: "";
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 0.15rem;
+  height: 18%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.reader-shell.is-desktop .reader-book-host {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.55));
+}
+
+/* Center spine groove across the open spread */
+.reader-shell.is-desktop .reader-book-host.is-ready::after {
+  content: "";
+  position: absolute;
+  top: 3%;
+  bottom: 3%;
+  left: 50%;
+  width: 14px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 4;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.18) 0%,
+    rgba(0, 0, 0, 0.42) 45%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(0, 0, 0, 0.38) 55%,
+    rgba(0, 0, 0, 0.14) 100%
+  );
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.25);
+  opacity: 0.85;
+}
+
+.reader-shell.is-desktop .reader-edge-nav {
+  width: 3.4rem;
+  min-height: 7.5rem;
+  padding: 1rem 0.35rem;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.06em;
+  box-shadow: 5px 5px 0 #000;
+}
+
+.reader-shell.is-desktop .reader-edge-prev {
+  transform: rotate(180deg);
 }
 
 @media (max-width: 900px) {
   .reader-shell.is-desktop .reader-edge-nav {
     display: none;
+  }
+
+  .reader-shell.is-desktop .reader-book-frame {
+    max-width: 100%;
+    padding: 0.5rem;
   }
 }
 
@@ -444,9 +522,35 @@ body {
   box-shadow: 8px 8px 0 #c8f542;
 }
 
+.reader-shell.is-desktop .reader-book-host .stf__block {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.06) inset,
+    10px 12px 0 #c8f542,
+    0 22px 40px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.reader-shell.is-desktop .reader-book-host .stf__item {
+  background-color: #fffaf2;
+}
+
+.reader-shell.is-desktop .reader-book-host .stf__outerShadow,
+.reader-shell.is-desktop .reader-book-host .stf__innerShadow,
+.reader-shell.is-desktop .reader-book-host .stf__hardShadow,
+.reader-shell.is-desktop .reader-book-host .stf__hardInnerShadow {
+  opacity: 1;
+}
+
 .book-page {
   background: #fff;
   overflow: hidden;
+}
+
+.reader-shell.is-desktop .book-page {
+  background:
+    linear-gradient(105deg, rgba(255, 250, 240, 0.95) 0%, #fff 38%, #fffef8 100%);
+  box-shadow: inset 0 0 40px rgba(40, 28, 12, 0.04);
 }
 
 .book-page canvas {

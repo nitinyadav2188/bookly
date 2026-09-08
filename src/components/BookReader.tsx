@@ -285,12 +285,14 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           const z = zoomRef.current || 1;
           const availW = Math.max(0, host.clientWidth / z);
           const availH = Math.max(0, host.clientHeight / z);
+          // Desktop: fill the open-book frame more aggressively; touch stays compact.
+          const widthDivisor = isNarrow ? 1.08 : touchPrimary ? 2.15 : 2.02;
           const pageWidth = Math.min(
-            560,
-            Math.max(240, Math.floor(availW / (isNarrow ? 1.08 : 2.15))),
+            touchPrimary ? 560 : 640,
+            Math.max(240, Math.floor(availW / widthDivisor)),
           );
           const pageHeight = Math.min(
-            Math.floor(availH * 0.92),
+            Math.floor(availH * (touchPrimary ? 0.92 : 0.96)),
             Math.floor(pageWidth * 1.38),
           );
           return { pageWidth, pageHeight, availW, availH };
@@ -330,15 +332,15 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           height: pageHeight,
           size: SIZE_STRETCH,
           minWidth: 220,
-          maxWidth: 720,
+          maxWidth: touchPrimary ? 720 : 780,
           minHeight: 300,
-          maxHeight: 1100,
+          maxHeight: touchPrimary ? 1100 : 1200,
           drawShadow: true,
-          maxShadowOpacity: 0.5,
+          maxShadowOpacity: touchPrimary ? 0.5 : 0.72,
           showCover: false,
           mobileScrollSupport: false,
           swipeDistance: SWIPE_DISTANCE,
-          flippingTime: 650,
+          flippingTime: touchPrimary ? 650 : 820,
           usePortrait: true,
           autoSize: true,
           startPage,
@@ -806,52 +808,54 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             className="reader-edge-nav reader-edge-prev"
             aria-label="Previous page"
           >
-            ← Prev
+            Prev
           </button>
         ) : null}
 
-        <div
-          className={`reader-book-host ${ready ? "is-ready" : ""}`}
-          style={{
-            visibility: ready ? "visible" : "hidden",
-            transform: `scale(${zoom})`,
-            transformOrigin: "center center",
-          }}
-        >
-          <div key={layoutKey} ref={hostRef} className="h-full w-full" />
+        <div className={touchPrimary ? undefined : "reader-book-frame"}>
+          <div
+            className={`reader-book-host ${ready ? "is-ready" : ""}`}
+            style={{
+              visibility: ready ? "visible" : "hidden",
+              transform: `scale(${zoom})`,
+              transformOrigin: "center center",
+            }}
+          >
+            <div key={layoutKey} ref={hostRef} className="h-full w-full" />
 
-          {ready ? (
-            <AnnotationLayer
-              active={annotateMode}
-              tool={annotTool}
-              color={annotColor}
-              vibe={annotVibe}
-              pageIndex={pageIndex}
-              isNarrow={isNarrow}
-              hostRef={hostRef}
-              highlights={highlights}
-              notes={notes}
-              onAddHighlight={addHighlight}
-              onAddNote={addNote}
-              onUpdateNote={updateNote}
-              onDeleteNote={deleteNote}
-              onDeleteHighlight={deleteHighlight}
-            />
-          ) : null}
+            {ready ? (
+              <AnnotationLayer
+                active={annotateMode}
+                tool={annotTool}
+                color={annotColor}
+                vibe={annotVibe}
+                pageIndex={pageIndex}
+                isNarrow={isNarrow}
+                hostRef={hostRef}
+                highlights={highlights}
+                notes={notes}
+                onAddHighlight={addHighlight}
+                onAddNote={addNote}
+                onUpdateNote={updateNote}
+                onDeleteNote={deleteNote}
+                onDeleteHighlight={deleteHighlight}
+              />
+            ) : null}
 
-          {touchPrimary && ready && !annotateMode ? (
-            <div
-              className="reader-gesture-layer"
-              onPointerDown={onGesturePointerDown}
-              onPointerMove={onGesturePointerMove}
-              onPointerUp={(e) => endGesture(e, false)}
-              onPointerCancel={(e) => endGesture(e, true)}
-              role="presentation"
-            >
-              <div className="reader-tap-zone reader-tap-prev" aria-hidden />
-              <div className="reader-tap-zone reader-tap-next" aria-hidden />
-            </div>
-          ) : null}
+            {touchPrimary && ready && !annotateMode ? (
+              <div
+                className="reader-gesture-layer"
+                onPointerDown={onGesturePointerDown}
+                onPointerMove={onGesturePointerMove}
+                onPointerUp={(e) => endGesture(e, false)}
+                onPointerCancel={(e) => endGesture(e, true)}
+                role="presentation"
+              >
+                <div className="reader-tap-zone reader-tap-prev" aria-hidden />
+                <div className="reader-tap-zone reader-tap-next" aria-hidden />
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {!touchPrimary && ready && !annotateMode ? (
@@ -862,7 +866,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             className="reader-edge-nav reader-edge-next"
             aria-label="Next page"
           >
-            Next →
+            Next
           </button>
         ) : null}
 
