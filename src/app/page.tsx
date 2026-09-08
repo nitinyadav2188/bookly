@@ -53,7 +53,6 @@ export default function HomePage() {
 
     try {
       const opened = await openPdfFromFile(file);
-      // Brief pause so the preparing state is readable
       await new Promise((r) => setTimeout(r, 450));
       setDocument(opened);
       setScreen("reader");
@@ -85,109 +84,131 @@ export default function HomePage() {
       <Header onUpload={openUpload} onInstall={() => setInstallOpen(true)} />
 
       <main>
-        <section className="bookly-container grid items-center gap-12 py-14 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:py-20">
-          <div className="max-w-xl">
-            <p className="font-display text-5xl leading-none tracking-tight text-ink sm:text-6xl md:text-7xl">
-              Bookly
-            </p>
-            <h1 className="mt-6 font-display text-3xl leading-tight text-ink sm:text-4xl md:text-[2.75rem]">
-              Turn your PDF into a book.
-            </h1>
-            <p className="mt-4 max-w-md text-base leading-relaxed text-ink-soft sm:text-lg">
-              Upload a PDF and read it with the feeling of turning real pages.
-            </p>
+        {/* Black hero — Vouch-style */}
+        <section className="border-b-[3px] border-black bg-black text-white">
+          <div className="bookly-container grid items-center gap-12 py-14 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 lg:py-16">
+            <div className="max-w-2xl">
+              <span className="nb-tag">PDF only · Simple · Private</span>
+              <h1 className="mt-6 font-display text-[clamp(2.4rem,8vw,4.75rem)] leading-[0.95] text-white">
+                Turn your PDF into a{" "}
+                <span className="bg-lime px-1 text-black">book.</span>
+              </h1>
+              <p className="mt-5 max-w-md text-base leading-relaxed text-white/75 sm:text-lg">
+                Upload a PDF and read it with the feeling of turning real pages.
+              </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={openUpload}
-                className="rounded-md bg-ink px-5 py-3 text-sm text-paper transition hover:bg-accent"
-              >
-                Upload PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => setInstallOpen(true)}
-                className="rounded-md border border-black/10 bg-white/40 px-5 py-3 text-sm text-ink transition hover:bg-white/70"
-              >
-                Install Bookly
-              </button>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <button type="button" onClick={openUpload} className="nb-btn nb-btn-lime text-sm">
+                  Upload PDF →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInstallOpen(true)}
+                  className="nb-btn nb-btn-blue text-sm"
+                >
+                  Install Bookly
+                </button>
+              </div>
+
+              {prepareError ? (
+                <p className="mt-4 border-[3px] border-black bg-pink px-3 py-2 font-display text-sm text-white">
+                  {prepareError}
+                </p>
+              ) : null}
             </div>
 
-            <p className="mt-4 text-sm tracking-wide text-ink-faint">
-              PDF only • Simple • Private
-            </p>
-            {prepareError ? (
-              <p className="mt-3 text-sm text-[color:var(--danger)]">{prepareError}</p>
-            ) : null}
-          </div>
-
-          <div className="justify-self-center lg:justify-self-end">
-            <HeroBook />
+            <div className="justify-self-center lg:justify-self-end">
+              <HeroBook />
+            </div>
           </div>
         </section>
 
-        <section id="how-it-works" className="border-t border-black/5 py-16">
+        {/* Color feature grid */}
+        <section className="border-b-[3px] border-black">
+          <div className="grid sm:grid-cols-2">
+            {[
+              { title: "Grocery lists", color: "bg-lime text-black", label: "Use it for" },
+              { title: "Long reports", color: "bg-pink text-white", label: "Use it for" },
+              { title: "Class notes", color: "bg-blue text-white", label: "Use it for" },
+              { title: "Novel PDFs", color: "bg-orange text-black", label: "Use it for" },
+            ].map((tile) => (
+              <div
+                key={tile.title}
+                className={`feature-tile rounded-none border-0 border-b-[3px] border-black sm:border-r-[3px] sm:odd:border-r-[3px] ${tile.color}`}
+              >
+                <p className="eyebrow">{tile.label}</p>
+                <h3>{tile.title}</h3>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="how-it-works" className="border-b-[3px] border-black py-16">
           <div className="bookly-container">
-            <h2 className="font-display text-3xl text-ink">How it works</h2>
-            <p className="mt-3 max-w-xl text-ink-soft">
-              Three steps. No accounts. No cloud library.
-            </p>
-            <ol className="mt-10 grid gap-10 sm:grid-cols-3">
+            <p className="font-mono-label text-[11px] font-bold text-black/50">How it works</p>
+            <h2 className="mt-2 font-display text-4xl text-black">Three steps. No fluff.</h2>
+            <ol className="mt-10 grid gap-5 sm:grid-cols-3">
               {[
                 {
-                  step: "1",
+                  step: "01",
                   title: "Upload a PDF",
-                  copy: "Choose a file from your device. It never leaves your browser.",
+                  copy: "Pick a file from your device. It never leaves your browser.",
+                  color: "bg-lime",
                 },
                 {
-                  step: "2",
+                  step: "02",
                   title: "Open as a book",
-                  copy: "Bookly lays pages into a soft, paper-like spread.",
+                  copy: "Pages land in a spread that feels like paper, not a toolbar.",
+                  color: "bg-blue text-white",
                 },
                 {
-                  step: "3",
+                  step: "03",
                   title: "Turn and read",
-                  copy: "Swipe or click to flip pages — with a subtle paper sound if you like.",
+                  copy: "Swipe or click to flip — with a subtle paper sound if you want it.",
+                  color: "bg-pink text-white",
                 },
               ].map((item) => (
-                <li key={item.step}>
-                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-ink-faint">
-                    Step {item.step}
-                  </p>
-                  <h3 className="mt-2 font-display text-2xl text-ink">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-soft">{item.copy}</p>
+                <li
+                  key={item.step}
+                  className={`border-[3px] border-black p-5 shadow-[5px_5px_0_#000] ${item.color}`}
+                >
+                  <p className="font-mono-label text-[10px] font-bold opacity-70">Step {item.step}</p>
+                  <h3 className="mt-3 font-display text-2xl leading-none">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed opacity-90">{item.copy}</p>
                 </li>
               ))}
             </ol>
           </div>
         </section>
 
-        <section id="privacy" className="border-t border-black/5 py-16">
+        <section id="privacy" className="border-b-[3px] border-black bg-black py-16 text-white">
           <div className="bookly-container max-w-2xl">
-            <h2 className="font-display text-3xl text-ink">Your PDF stays private.</h2>
-            <p className="mt-4 text-base leading-relaxed text-ink-soft">
-              Bookly processes files locally in your browser. Nothing is uploaded to a
-              server, and documents are not made publicly accessible. Close the tab and
-              the file leaves with it — only your last page is remembered for this
-              browser session.
+            <span className="nb-tag">Privacy</span>
+            <h2 className="mt-5 font-display text-4xl leading-none text-white">
+              Your PDF stays <span className="bg-pink px-1">private.</span>
+            </h2>
+            <p className="mt-5 text-base leading-relaxed text-white/75">
+              Bookly processes files locally in your browser. Nothing is uploaded to a server.
+              Close the tab and the file leaves with it — only your last page is remembered for
+              this browser session.
             </p>
           </div>
         </section>
 
-        <section id="install" className="border-t border-black/5 py-16">
-          <div className="bookly-container flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
+        <section id="install" className="border-b-[3px] border-black py-16">
+          <div className="bookly-container flex flex-col items-start justify-between gap-6 border-[3px] border-black bg-white p-6 shadow-[8px_8px_0_#000] sm:flex-row sm:items-end sm:p-8">
             <div>
-              <h2 className="font-display text-3xl text-ink">Take Bookly with you</h2>
-              <p className="mt-3 max-w-md text-ink-soft">
-                Install on your phone for a fullscreen reading app, or keep using it in
-                the browser.
+              <p className="font-mono-label text-[11px] font-bold text-black/50">Mobile</p>
+              <h2 className="mt-2 font-display text-3xl text-black">Take Bookly with you</h2>
+              <p className="mt-3 max-w-md text-ink-muted">
+                Install on your phone for a fullscreen reading app, or keep using it in the
+                browser.
               </p>
             </div>
             <button
               type="button"
               onClick={() => setInstallOpen(true)}
-              className="rounded-md bg-ink px-5 py-3 text-sm text-paper transition hover:bg-accent"
+              className="nb-btn nb-btn-blue text-sm"
             >
               Install Bookly
             </button>
@@ -195,10 +216,10 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-black/5 py-8">
-        <div className="bookly-container flex flex-col gap-2 text-sm text-ink-faint sm:flex-row sm:items-center sm:justify-between">
-          <p>Bookly — PDF → book.</p>
-          <p>Private by design. Local-only reading.</p>
+      <footer className="bg-cream py-10">
+        <div className="bookly-container flex flex-col items-center gap-2 text-center">
+          <p className="font-display text-lg text-black">Bookly © 2026</p>
+          <p className="font-mono-label text-[10px] text-black/50">PDF → Book · Local only</p>
         </div>
       </footer>
 

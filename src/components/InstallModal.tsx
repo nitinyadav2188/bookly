@@ -49,106 +49,101 @@ export function InstallModal({ open, onClose }: InstallModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="install-title"
-        className="relative w-full max-w-lg rounded-2xl border border-black/5 bg-[color:var(--surface)] p-6 shadow-[0_30px_60px_-28px_var(--shadow-deep)]"
+        className="relative w-full max-w-lg border-[3px] border-black bg-cream p-5 shadow-[8px_8px_0_#000] sm:p-6"
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 id="install-title" className="font-display text-2xl text-ink">
+            <p className="font-mono-label text-[10px] font-bold text-black/60">Install</p>
+            <h2 id="install-title" className="mt-1 font-display text-2xl text-black">
               Install Bookly
             </h2>
-            <p className="mt-1 text-sm text-ink-soft">
-              Read like a native app — same private, on-device experience.
+            <p className="mt-2 text-sm text-ink-muted">
+              Same private reader. Fullscreen. Home screen ready.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-2 py-1 text-ink-soft transition hover:bg-black/[0.05] hover:text-ink"
+            className="border-[3px] border-black bg-white px-2.5 py-1 font-display text-sm shadow-[3px_3px_0_#000]"
             aria-label="Close"
           >
-            ✕
+            X
           </button>
         </div>
 
         <div className="space-y-4">
-          <section className="rounded-xl border border-black/8 bg-paper/80 p-4">
-            <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink-faint">
-              Install on phone
-            </p>
+          <section className="border-[3px] border-black bg-white p-4 shadow-[4px_4px_0_#000]">
+            <p className="font-mono-label text-[10px] font-bold text-black/60">Install on phone</p>
             {standalone ? (
-              <p className="mt-2 text-sm text-ink-soft">Bookly is already installed on this device.</p>
+              <p className="mt-2 text-sm text-ink-muted">Bookly is already installed on this device.</p>
             ) : (
               <>
                 {canPrompt ? (
                   <button
                     type="button"
-                    className="mt-3 w-full rounded-md bg-ink px-4 py-3 text-sm text-paper transition hover:bg-accent"
+                    className="nb-btn nb-btn-lime mt-3 w-full text-sm"
                     onClick={async () => {
                       const outcome = await promptPwaInstall();
                       if (outcome === "accepted") {
-                        setStatus("Installed — you can open Bookly from your home screen.");
+                        setStatus("Installed. Open Bookly from your home screen.");
                       } else if (outcome === "dismissed") {
                         setStatus("Install canceled.");
                       }
                     }}
                   >
-                    Add Bookly to home screen
+                    Add to home screen
                   </button>
                 ) : (
-                  <div className="mt-2 space-y-2 text-sm text-ink-soft">
+                  <div className="mt-2 space-y-2 text-sm text-ink-muted">
                     {platform === "ios" ? (
                       <p>
-                        Tap <strong className="font-medium text-ink">Share</strong>, then{" "}
-                        <strong className="font-medium text-ink">Add to Home Screen</strong>.
+                        Tap <strong className="text-black">Share</strong>, then{" "}
+                        <strong className="text-black">Add to Home Screen</strong>.
                       </p>
                     ) : platform === "android" ? (
                       <p>
-                        Open the browser menu and choose{" "}
-                        <strong className="font-medium text-ink">Install app</strong> or{" "}
-                        <strong className="font-medium text-ink">Add to Home screen</strong>.
+                        Open the browser menu →{" "}
+                        <strong className="text-black">Install app</strong> /{" "}
+                        <strong className="text-black">Add to Home screen</strong>.
                       </p>
                     ) : (
-                      <p>
-                        Use your browser&apos;s install icon in the address bar, or open Bookly on
-                        your phone to install.
-                      </p>
+                      <p>Use the install icon in your address bar, or open Bookly on your phone.</p>
                     )}
                   </div>
                 )}
 
                 {apkAvailable ? (
-                  <a
-                    href="/downloads/bookly.apk"
-                    className="mt-3 inline-flex w-full items-center justify-center rounded-md border border-black/10 bg-white/50 px-4 py-3 text-sm text-ink transition hover:bg-white"
-                  >
+                  <a href="/downloads/bookly.apk" className="nb-btn nb-btn-blue mt-3 w-full text-sm">
                     Download Android APK
                   </a>
                 ) : (
-                  <p className="mt-3 text-xs text-ink-faint">
-                    APK builds ship from Capacitor — see README for `npm run android:build`.
+                  <p className="mt-3 font-mono-label text-[10px] text-black/45">
+                    APK via Capacitor — see README (`npm run android:build`)
                   </p>
                 )}
               </>
             )}
           </section>
 
-          <section className="rounded-xl border border-black/8 bg-transparent p-4">
-            <p className="text-xs font-medium uppercase tracking-[0.14em] text-ink-faint">
-              Use in browser
-            </p>
-            <p className="mt-2 text-sm text-ink-soft">
+          <section className="border-[3px] border-black bg-lime p-4 shadow-[4px_4px_0_#000]">
+            <p className="font-mono-label text-[10px] font-bold text-black/60">Use in browser</p>
+            <p className="mt-2 text-sm text-black">
               No install needed. Upload a PDF and start reading — everything stays local.
             </p>
             <button
               type="button"
               onClick={onClose}
-              className="mt-3 text-sm font-medium text-ink underline-offset-4 hover:underline"
+              className="nb-btn nb-btn-white mt-3 text-sm"
             >
               Continue in browser
             </button>
           </section>
 
-          {status ? <p className="text-sm text-ink-soft">{status}</p> : null}
+          {status ? (
+            <p className="border-[3px] border-black bg-blue px-3 py-2 font-display text-sm text-white">
+              {status}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

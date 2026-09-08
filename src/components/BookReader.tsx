@@ -242,53 +242,61 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   return (
     <div className="reader-shell">
       <div
-        className={`reader-controls absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-4 py-3 ${
+        className={`reader-controls absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-3 py-3 sm:px-4 ${
           chromeVisible ? "visible-chrome" : "hidden-chrome"
         }`}
       >
-        <div className="min-w-0">
-          <p className="truncate text-sm text-[#f5f0e8]">{doc.name}</p>
+        <div className="min-w-0 border-[3px] border-black bg-lime px-3 py-2 shadow-[4px_4px_0_#c8f542]">
+          <p className="truncate font-display text-xs text-black sm:text-sm">{doc.name}</p>
           {resumeHint ? (
-            <p className="text-xs text-[#c4b8a6]">Continue from page {resumeHint}</p>
+            <p className="font-mono-label text-[9px] text-black/70">
+              Continue from page {resumeHint}
+            </p>
           ) : null}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={toggleSound}
-            className="rounded-md px-3 py-2 text-lg transition hover:bg-white/10"
+            className={`border-[3px] border-black px-3 py-2 font-display text-sm shadow-[3px_3px_0_#000] ${
+              soundOn ? "bg-lime text-black" : "bg-white text-black"
+            }`}
             aria-label={soundOn ? "Mute page sound" : "Enable page sound"}
             title={soundOn ? "Sound on" : "Sound off"}
           >
-            {soundOn ? "🔊" : "🔇"}
+            {soundOn ? "SND" : "MUTE"}
           </button>
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="rounded-md px-3 py-2 text-lg transition hover:bg-white/10"
+            className="border-[3px] border-black bg-blue px-3 py-2 font-display text-sm text-white shadow-[3px_3px_0_#000]"
             aria-label="Fullscreen"
             title="Fullscreen"
           >
-            ⛶
+            FULL
           </button>
           <button
             type="button"
             onClick={onExit}
-            className="rounded-md px-3 py-2 text-lg transition hover:bg-white/10"
+            className="border-[3px] border-black bg-pink px-3 py-2 font-display text-sm text-white shadow-[3px_3px_0_#000]"
             aria-label="Exit reader"
             title="Exit"
           >
-            ✕
+            EXIT
           </button>
         </div>
       </div>
 
       <div className="reader-stage">
         {!ready && !error ? (
-          <p className="pointer-events-none absolute text-sm text-[#c4b8a6]">Opening book…</p>
+          <p className="pointer-events-none absolute font-display text-sm text-lime">
+            Opening book…
+          </p>
         ) : null}
         {error ? (
-          <p className="pointer-events-none absolute text-sm text-[#f0d0c8]">{error}</p>
+          <p className="pointer-events-none absolute border-[3px] border-black bg-pink px-3 py-2 font-display text-sm text-white">
+            {error}
+          </p>
         ) : null}
 
         <div
@@ -321,23 +329,23 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           chromeVisible ? "visible-chrome" : "hidden-chrome"
         }`}
       >
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-2 py-1.5 backdrop-blur-md">
+        <div className="flex items-center gap-0 border-[3px] border-black bg-white shadow-[5px_5px_0_#c8f542]">
           <button
             type="button"
             onClick={goPrev}
             disabled={pageIndex <= 0}
-            className="rounded-full px-4 py-2 text-sm transition hover:bg-white/10 disabled:opacity-35"
+            className="border-r-[3px] border-black bg-orange px-4 py-3 font-display text-xs text-black disabled:opacity-35 sm:text-sm"
           >
-            ← Previous
+            ← Prev
           </button>
-          <span className="min-w-[7.5rem] text-center text-sm tabular-nums text-[#efe6d8]">
+          <span className="min-w-[7.5rem] px-3 text-center font-mono-label text-[11px] font-bold text-black">
             Page {pageLabel}
           </span>
           <button
             type="button"
             onClick={goNext}
             disabled={pageIndex >= doc.pageCount - 1}
-            className="rounded-full px-4 py-2 text-sm transition hover:bg-white/10 disabled:opacity-35"
+            className="border-l-[3px] border-black bg-lime px-4 py-3 font-display text-xs text-black disabled:opacity-35 sm:text-sm"
           >
             Next →
           </button>

@@ -1,15 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Source_Sans_3 } from "next/font/google";
+import { Archivo_Black, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const display = Fraunces({
+const display = Archivo_Black({
   variable: "--font-display",
   subsets: ["latin"],
+  weight: "400",
 });
 
-const ui = Source_Sans_3({
+const ui = Space_Grotesk({
   variable: "--font-ui",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const mono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -34,7 +42,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f7f3eb",
+  themeColor: "#fdfceb",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -43,7 +51,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${display.variable} ${ui.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${display.variable} ${ui.variable} ${mono.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );

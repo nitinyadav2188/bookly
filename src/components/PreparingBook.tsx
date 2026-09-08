@@ -2,18 +2,22 @@
 
 export function PreparingBook({ fileName }: { fileName?: string }) {
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-[color:var(--paper)] px-6">
-      <div className="w-full max-w-sm text-center">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-cream px-6">
+      <div className="w-full max-w-md border-[3px] border-black bg-white p-8 text-center shadow-[8px_8px_0_#000]">
         <div className="mx-auto mb-6 flex items-center justify-center gap-2">
-          <span className="pulse-dot" />
-          <span className="pulse-dot [animation-delay:150ms]" />
-          <span className="pulse-dot [animation-delay:300ms]" />
+          <span className="pulse-block" />
+          <span className="pulse-block" />
+          <span className="pulse-block" />
         </div>
-        <h1 className="font-display text-3xl text-ink">Preparing your book...</h1>
-        <p className="mt-3 text-sm text-ink-soft">
+        <p className="font-mono-label text-[10px] font-bold text-black/50">Working</p>
+        <h1 className="mt-2 font-display text-3xl leading-none text-black">
+          Preparing your book...
+        </h1>
+        <p className="mt-4 text-sm text-ink-muted">
           {fileName ? (
             <>
-              Opening <span className="text-ink">{fileName}</span> privately on this device.
+              Opening <span className="font-semibold text-black">{fileName}</span> privately on
+              this device.
             </>
           ) : (
             "Rendering the first pages for a smooth turn."

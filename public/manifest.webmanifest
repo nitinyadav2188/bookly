@@ -4,8 +4,8 @@
   "description": "Turn your PDF into a book. Private, local reading with real page turns.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f3eb",
-  "theme_color": "#f7f3eb",
+  "background_color": "#fdfceb",
+  "theme_color": "#fdfceb",
   "orientation": "any",
   "icons": [
     {
