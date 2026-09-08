@@ -112,11 +112,11 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   readyRef.current = ready;
 
   const ensurePagesRendered = useCallback(
-    async (centerIndex: number) => {
+    async (centerIndex: number, radiusOverride?: number) => {
       const pdf = pdfRef.current;
       if (!pdf) return;
 
-      const radius = isNarrow ? 2 : 3;
+      const radius = radiusOverride ?? (isNarrow ? 2 : 3);
       const targets: number[] = [];
       for (let i = centerIndex - radius; i <= centerIndex + radius; i += 1) {
         if (i >= 0 && i < doc.pageCount) targets.push(i);
@@ -129,34 +129,42 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         }
       }
 
-      await Promise.all(
-        targets.map(async (index) => {
-          if (renderedRef.current.has(index) || renderingRef.current.has(index)) return;
-          renderingRef.current.add(index);
-          const pageEl = window.document.querySelector(
-            `.book-page[data-page="${index}"]`,
-          ) as HTMLElement | null;
-          const canvas = pageEl?.querySelector("canvas") as HTMLCanvasElement | null;
-          if (!canvas) {
-            renderingRef.current.delete(index);
-            return;
-          }
-          try {
-            await renderPdfPageToCanvas(pdf, index + 1, canvas);
-            renderedRef.current.add(index);
-            pageEl?.classList.remove("loading");
-            pageEl?.classList.remove("render-error");
-          } catch {
-            pageEl?.classList.add("render-error");
-            pageEl?.setAttribute(
-              "data-error",
-              "This page couldn't be rendered. Try reopening the document.",
-            );
-          } finally {
-            renderingRef.current.delete(index);
-          }
-        }),
+      // Paint the center page first so the book can appear ASAP, then neighbors.
+      const ordered = [...targets].sort(
+        (a, b) => Math.abs(a - centerIndex) - Math.abs(b - centerIndex),
       );
+      const first = ordered[0];
+      const rest = ordered.slice(1);
+
+      const paint = async (index: number) => {
+        if (renderedRef.current.has(index) || renderingRef.current.has(index)) return;
+        renderingRef.current.add(index);
+        const pageEl = window.document.querySelector(
+          `.book-page[data-page="${index}"]`,
+        ) as HTMLElement | null;
+        const canvas = pageEl?.querySelector("canvas") as HTMLCanvasElement | null;
+        if (!canvas) {
+          renderingRef.current.delete(index);
+          return;
+        }
+        try {
+          await renderPdfPageToCanvas(pdf, index + 1, canvas);
+          renderedRef.current.add(index);
+          pageEl?.classList.remove("loading");
+          pageEl?.classList.remove("render-error");
+        } catch {
+          pageEl?.classList.add("render-error");
+          pageEl?.setAttribute(
+            "data-error",
+            "This page couldn't be rendered. Try reopening the document.",
+          );
+        } finally {
+          renderingRef.current.delete(index);
+        }
+      };
+
+      if (first != null) await paint(first);
+      if (rest.length) await Promise.all(rest.map((index) => paint(index)));
     },
     [doc.pageCount, isNarrow],
   );
@@ -193,7 +201,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         renderedRef.current = new Set();
         renderingRef.current = new Set();
 
-        const pdf = await loadPdfDocument(doc.data);
+        // Reuse the document already parsed during upload when available.
+        const pdf = await loadPdfDocument(doc.data, doc.id);
         if (cancelled) {
           await pdf.destroy();
           return;
@@ -211,7 +220,6 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         }
 
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         if (cancelled || !hostRef.current || !pagesRef.current) return;
 
         const pageNodes = pagesRef.current.querySelectorAll(".book-page");
@@ -220,9 +228,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           return;
         }
 
+        // Only block open on the landing page ±1; warm a wider radius after flipbook mounts.
         setStatus("Rendering pages…");
-        await ensurePagesRendered(startPage);
-        if (cancelled || !hostRef.current) return;
 
         const host = hostRef.current;
         const measure = () => {
@@ -240,24 +247,30 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           return { pageWidth, pageHeight, availW, availH };
         };
 
-        // Wait until the reader host has real layout (viewport flips can be 0×0 briefly)
-        let pageWidth = 0;
-        let pageHeight = 0;
-        for (let attempt = 0; attempt < 30; attempt += 1) {
-          const m = measure();
-          if (m.availW >= 80 && m.availH >= 80 && m.pageWidth >= 120 && m.pageHeight >= 160) {
-            pageWidth = m.pageWidth;
-            pageHeight = m.pageHeight;
-            break;
+        // Size the host while the first pages paint — don't serialize the two waits.
+        const layoutReady = (async () => {
+          for (let attempt = 0; attempt < 30; attempt += 1) {
+            const m = measure();
+            if (m.availW >= 80 && m.availH >= 80 && m.pageWidth >= 120 && m.pageHeight >= 160) {
+              return m;
+            }
+            await new Promise((r) => window.setTimeout(r, 50));
+            if (cancelled || !hostRef.current) return null;
           }
-          await new Promise((r) => window.setTimeout(r, 50));
-          if (cancelled || !hostRef.current) return;
-        }
-        if (pageWidth < 120 || pageHeight < 160) {
+          return null;
+        })();
+
+        await ensurePagesRendered(startPage, 1);
+        if (cancelled || !hostRef.current) return;
+
+        const sized = await layoutReady;
+        if (cancelled || !hostRef.current) return;
+        if (!sized) {
           setError("Could not size the book for this screen.");
           setStatus("");
           return;
         }
+        const { pageWidth, pageHeight } = sized;
 
         ignoreSoundUntilRef.current = Date.now() + 900;
 
@@ -311,6 +324,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           void ensurePagesRendered(index);
         });
 
+        // Nearby pages continue loading in the background after first paint.
         void ensurePagesRendered(startPage);
 
         if (typeof ResizeObserver !== "undefined") {

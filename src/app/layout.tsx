@@ -55,6 +55,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${display.variable} ${ui.variable} ${mono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="preload" href="/pdf.worker.min.mjs" as="script" />
+      </head>
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );

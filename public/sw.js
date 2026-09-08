@@ -1,5 +1,5 @@
 /* Bookly service worker — network-first shell for offline install. */
-const CACHE = "bookly-shell-v3";
+const CACHE = "bookly-shell-v4";
 const SHELL = [
   "./",
   "./manifest.webmanifest",
@@ -7,10 +7,10 @@ const SHELL = [
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./sounds/page-turn.wav",
-  "./pdf.worker.min.mjs",
 ];
 
 self.addEventListener("install", (event) => {
+  // Keep install snappy — large assets (pdf worker) cache on first use.
   event.waitUntil(
     caches
       .open(CACHE)
@@ -41,7 +41,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Network-first for HTML/JS/CSS so updates always win
+  // Network-first for HTML/JS/CSS so updates always win (app never stuck on stale shell)
   const isShellDoc =
     request.mode === "navigate" ||
     url.pathname.endsWith(".html") ||
@@ -64,18 +64,29 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Cache-first for static assets (icons, worker, sounds) — warm after first hit
   event.respondWith(
     caches.match(request).then((cached) => {
-      const fetched = fetch(request)
+      if (cached) {
+        // Revalidate in background
+        void fetch(request)
+          .then((response) => {
+            if (response.ok) {
+              void caches.open(CACHE).then((cache) => cache.put(request, response));
+            }
+          })
+          .catch(() => {});
+        return cached;
+      }
+      return fetch(request)
         .then((response) => {
           if (response.ok) {
             const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(request, copy));
+            void caches.open(CACHE).then((cache) => cache.put(request, copy));
           }
           return response;
         })
         .catch(() => cached);
-      return fetched || cached;
     }),
   );
 });

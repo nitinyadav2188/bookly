@@ -28,15 +28,22 @@ export function InstallModal({ open, onClose }: InstallModalProps) {
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    fetch("/downloads/bookly.apk", { method: "HEAD" })
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 1200);
+    fetch("/downloads/bookly.apk", { method: "HEAD", signal: controller.signal })
       .then((res) => {
         if (!cancelled) setApkAvailable(res.ok);
       })
       .catch(() => {
         if (!cancelled) setApkAvailable(false);
+      })
+      .finally(() => {
+        window.clearTimeout(timer);
       });
     return () => {
       cancelled = true;
+      controller.abort();
+      window.clearTimeout(timer);
     };
   }, [open]);
 

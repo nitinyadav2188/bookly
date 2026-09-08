@@ -7,7 +7,7 @@ import { UploadModal } from "@/components/UploadModal";
 import { InstallModal } from "@/components/InstallModal";
 import { PreparingBook } from "@/components/PreparingBook";
 import { BookReader } from "@/components/BookReader";
-import { openPdfFromFile, isPdfFile, PdfOpenError, type OpenedPdf } from "@/lib/pdf";
+import { openPdfFromFile, isPdfFile, PdfOpenError, warmPdfWorker, type OpenedPdf } from "@/lib/pdf";
 import {
   captureInstallPrompt,
   type BeforeInstallPromptEvent,
@@ -35,6 +35,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    warmPdfWorker();
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {
         // optional
@@ -64,8 +65,8 @@ export default function HomePage() {
         throw new PdfOpenError("Please choose a PDF file.");
       }
       const opened = await openPdfFromFile(file);
+      // Open the reader as soon as page count is known — first pages render inside BookReader.
       setPreparePhase("rendering");
-      await new Promise((r) => setTimeout(r, 350));
       setBookDoc(opened);
       setScreen("reader");
     } catch (err) {

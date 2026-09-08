@@ -2,6 +2,11 @@ import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from "pdfjs-d
 
 GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
+/** Freshly opened docs — BookReader takes ownership and must destroy. */
+const pendingDocs = new Map<string, PDFDocumentProxy>();
+
+let workerWarmStarted = false;
+
 export type OpenedPdf = {
   id: string;
   name: string;
@@ -25,6 +30,17 @@ export function isPdfFile(file: File): boolean {
   return file.type === "application/pdf" || name.endsWith(".pdf");
 }
 
+/** Prefetch the pdf.js worker so the first open does not wait on a cold fetch. */
+export function warmPdfWorker(): void {
+  if (workerWarmStarted || typeof window === "undefined") return;
+  workerWarmStarted = true;
+  void fetch("/pdf.worker.min.mjs", { credentials: "same-origin", cache: "force-cache" }).catch(
+    () => {
+      workerWarmStarted = false;
+    },
+  );
+}
+
 function asUint8Array(data: ArrayBuffer): Uint8Array {
   return new Uint8Array(data.slice(0));
 }
@@ -33,6 +49,8 @@ export async function openPdfFromFile(file: File): Promise<OpenedPdf> {
   if (!isPdfFile(file)) {
     throw new PdfOpenError("Please choose a PDF file.");
   }
+
+  warmPdfWorker();
 
   let data: ArrayBuffer;
   try {
@@ -45,19 +63,30 @@ export async function openPdfFromFile(file: File): Promise<OpenedPdf> {
     throw new PdfOpenError("We couldn't open this PDF.");
   }
 
+  // Keep an owned copy for later re-open (pdf.js may detach the parse buffer).
+  const owned = data.slice(0);
+
   try {
-    const pdf = await getDocument({ data: asUint8Array(data) }).promise;
+    const pdf = await getDocument({ data: new Uint8Array(data) }).promise;
     const pageCount = pdf.numPages;
     if (!pageCount || pageCount < 1) {
       await pdf.destroy();
       throw new PdfOpenError("We couldn't open this PDF.");
     }
-    await pdf.destroy();
+
+    const id = makeDocumentId(file);
+    // Drop any prior pending doc for this id so we don't leak workers/proxies.
+    const prior = pendingDocs.get(id);
+    if (prior) {
+      pendingDocs.delete(id);
+      void prior.destroy();
+    }
+    pendingDocs.set(id, pdf);
+
     return {
-      id: makeDocumentId(file),
+      id,
       name: file.name,
-      // Keep an owned copy — pdf.js may detach transferred buffers
-      data: data.slice(0),
+      data: owned,
       pageCount,
     };
   } catch (err) {
@@ -66,7 +95,21 @@ export async function openPdfFromFile(file: File): Promise<OpenedPdf> {
   }
 }
 
-export async function loadPdfDocument(data: ArrayBuffer): Promise<PDFDocumentProxy> {
+/**
+ * Load a PDFDocumentProxy. Prefer the document already parsed during
+ * `openPdfFromFile` so the reader does not pay for a second full parse.
+ */
+export async function loadPdfDocument(
+  data: ArrayBuffer,
+  documentId?: string,
+): Promise<PDFDocumentProxy> {
+  if (documentId) {
+    const pending = pendingDocs.get(documentId);
+    if (pending) {
+      pendingDocs.delete(documentId);
+      return pending;
+    }
+  }
   return getDocument({ data: asUint8Array(data) }).promise;
 }
 
