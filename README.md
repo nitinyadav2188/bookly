@@ -18,19 +18,13 @@ Bookly is a focused reading tool, not a document platform. Upload a PDF, open it
 
 ```bash
 npm install
-npm run dev
-```
-
-Open [http://127.0.0.1:4321](http://127.0.0.1:4321).
-
-## Production build
-
-```bash
 npm run build
 npm start
 ```
 
-Static export lands in `out/` (also used by Capacitor).
+Open [http://127.0.0.1:4321](http://127.0.0.1:4321).
+
+For local iteration you can also run `npm run dev` (Next.js turbopack). Prefer `npm run build && npm start` when testing the flipbook — it serves the static export Capacitor uses.
 
 ## Privacy
 
