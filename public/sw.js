@@ -1,5 +1,5 @@
-/* Bookly service worker — network-first shell for offline install. */
-const CACHE = "bookly-shell-v5";
+/* Bookly service worker — network-first shell; snappy install (no huge worker). */
+const CACHE = "bookly-shell-v6";
 const SHELL = [
   "./",
   "./manifest.webmanifest",
@@ -12,7 +12,7 @@ const SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
-  // Keep install snappy — large assets (pdf worker) cache on first use.
+  // Keep install snappy — never cache pdf.worker (~1.3MB) during install/activate.
   event.waitUntil(
     caches
       .open(CACHE)
@@ -43,13 +43,18 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Network-first for HTML/JS/CSS so updates always win (app never stuck on stale shell)
+  // Network-first for HTML / JS / CSS / module scripts so updates always win.
+  // Includes .mjs app chunks; the large pdf.worker is handled separately below.
+  const path = url.pathname;
+  const isPdfWorker = path.endsWith("/pdf.worker.min.mjs") || path.endsWith("pdf.worker.min.mjs");
   const isShellDoc =
-    request.mode === "navigate" ||
-    url.pathname.endsWith(".html") ||
-    url.pathname.endsWith(".js") ||
-    url.pathname.endsWith(".css") ||
-    url.pathname.includes("/_next/");
+    !isPdfWorker &&
+    (request.mode === "navigate" ||
+      path.endsWith(".html") ||
+      path.endsWith(".js") ||
+      path.endsWith(".mjs") ||
+      path.endsWith(".css") ||
+      path.includes("/_next/"));
 
   if (isShellDoc) {
     event.respondWith(
@@ -66,11 +71,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for static assets (icons, worker, sounds) — warm after first hit
+  // Cache-first for static assets (icons, pdf worker, sounds) — warm after first hit.
+  // Worker is deliberately NOT in install SHELL so first visit activate stays fast.
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) {
-        // Revalidate in background
         void fetch(request)
           .then((response) => {
             if (response.ok) {

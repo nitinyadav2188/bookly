@@ -39,13 +39,25 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    // Warm the PDF worker immediately after hydration — do not wait on idle
+    // (idle can fire late on busy main threads and delays first open).
     warmPdfWorker();
     warmApkCheck();
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
-        // optional
-      });
+
+    // Register SW after first paint so install/activate never contends with boot.
+    const registerSw = () => {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js").catch(() => {
+          // optional
+        });
+      }
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(registerSw, { timeout: 2500 });
+      return () => window.cancelIdleCallback(id);
     }
+    const t = window.setTimeout(registerSw, 1200);
+    return () => window.clearTimeout(t);
   }, []);
 
   const handleInstall = useCallback(async () => {

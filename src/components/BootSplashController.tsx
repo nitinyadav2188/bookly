@@ -2,20 +2,25 @@
 
 import { useEffect } from "react";
 
-const MIN_MS = 420;
-const MAX_MS = 780;
-const REDUCED_MIN_MS = 120;
-const REDUCED_MAX_MS = 280;
+/** Brief brand beat — dismiss ASAP once hydrated; hard-cap under ~0.6s. */
+const MIN_MS = 280;
+const MAX_MS = 520;
+const FONT_BUDGET_MS = 80;
+/** prefers-reduced-motion: near-instant dismiss. */
+const REDUCED_MIN_MS = 0;
+const REDUCED_MAX_MS = 40;
 
 /**
- * Hides the SSR boot splash once the app is hydrated / ready.
- * Splash markup lives in layout for first paint (no blank flash).
- * Holds ~0.4–0.8s (or fonts-ready + min), shorter with prefers-reduced-motion.
+ * Hides the SSR boot splash once the app is hydrated.
+ * Does not wait on window `load` or long `document.fonts` — those stall on
+ * large assets (pdf worker) and slow first paint. Cap fonts at FONT_BUDGET_MS.
  */
 export function BootSplashController() {
   useEffect(() => {
     const el = document.getElementById("bookly-boot-splash");
     if (!el) return;
+    // Verification scripts may freeze the splash via data-hold.
+    if (el.dataset.hold === "1") return;
 
     const reduced =
       typeof window.matchMedia === "function" &&
@@ -40,23 +45,20 @@ export function BootSplashController() {
           el.remove();
         };
         el.addEventListener("transitionend", remove, { once: true });
-        window.setTimeout(remove, 420);
+        window.setTimeout(remove, reduced ? 180 : 380);
       }, wait);
     };
 
-    const ready = () => {
-      const fontsReady =
-        "fonts" in document
-          ? document.fonts.ready.then(() => undefined).catch(() => undefined)
-          : Promise.resolve();
-      void Promise.race([
-        fontsReady,
-        new Promise<void>((r) => window.setTimeout(r, Math.max(0, maxMs - minMs))),
-      ]).then(finish);
-    };
+    // Soft wait on fonts only — never block splash on a slow webfont fetch.
+    const fontsReady =
+      "fonts" in document
+        ? Promise.race([
+            document.fonts.ready.then(() => undefined).catch(() => undefined),
+            new Promise<void>((r) => window.setTimeout(r, FONT_BUDGET_MS)),
+          ])
+        : Promise.resolve();
 
-    if (document.readyState === "complete") ready();
-    else window.addEventListener("load", ready, { once: true });
+    void fontsReady.then(finish);
 
     const hard = window.setTimeout(finish, maxMs);
     return () => window.clearTimeout(hard);

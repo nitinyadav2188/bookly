@@ -1,18 +1,19 @@
 # Bookly
 
-Turn a PDF into a simple, beautiful digital book — with realistic page turns and a subtle paper sound.
+**Bookly** turns a PDF into a simple digital book — realistic page turns, optional paper sound, and a focused neo-brutal reading UI. Upload a file, open it as a book, turn pages, and read. No accounts, no cloud upload, no document platform baggage.
 
-Bookly is a focused reading tool, not a document platform. Upload a PDF, open it as a book, turn pages, and read. Everything stays private on your device.
+Built by **[NITIN YADAV](https://www.linkedin.com/in/nitin-yadav-681850299/)** · [GitHub](https://github.com/nitinyadav2188) · [X](https://x.com/nitindotdev)
 
 ## Features
 
 - **Landing → Upload → Reader** — three screens, nothing else
 - **Realistic page flips** via [StPageFlip](https://github.com/Nodlik/StPageFlip)
 - **Local PDF rendering** with PDF.js (files never leave the browser)
+- **In-reader annotations** — highlights and sticky notes, saved per document in the browser
 - **Page-turn sound** (off until you enable it)
 - **Session memory** of the last page for the same file
 - **PWA install** for mobile home-screen use
-- **Capacitor Android** packaging from the same codebase
+- **Capacitor Android** packaging from the same static export
 
 ## Quick start
 
@@ -24,11 +25,11 @@ npm start
 
 Open [http://127.0.0.1:4321](http://127.0.0.1:4321).
 
-For local iteration you can also run `npm run dev` (Next.js turbopack). Prefer `npm run build && npm start` when testing the flipbook — it serves the static export Capacitor uses.
+For local iteration you can also run `npm run dev` (Next.js Turbopack). Prefer `npm run build && npm start` when testing the flipbook — it serves the static export Capacitor uses.
 
 ## Privacy
 
-Your PDF stays private. Bookly opens and renders files **locally in the browser**. Nothing is uploaded to a server. Closing the tab clears the document; only the last page index is kept in `sessionStorage` for the current browser session.
+Your PDF stays private. Bookly opens and renders files **locally in the browser**. Nothing is uploaded to a server. Closing the tab clears the document; only the last page index (and optional annotations) are kept in browser storage for the current session / origin.
 
 ## Install on phone
 
@@ -36,6 +37,8 @@ Your PDF stays private. Bookly opens and renders files **locally in the browser*
 
 1. Open Bookly in a mobile browser (Chrome on Android, Safari on iOS).
 2. Tap **Install Bookly**, or use the browser’s **Add to Home Screen / Install app** action.
+
+A service worker caches a light app shell for offline-friendly revisits. HTML and JS stay network-first so updates are not stuck behind a stale cache. The large PDF.js worker is cached on first use — not during service-worker install — so first-load activate stays fast.
 
 ### Android APK (Capacitor)
 
@@ -55,15 +58,15 @@ Open the Android project anytime with:
 npm run android:open
 ```
 
-When `public/downloads/bookly.apk` exists, the Install dialog shows a **Download Android APK** button.
+When `public/downloads/bookly.apk` exists, the Install dialog shows a **Download Android APK** button (hidden on iOS where APKs are not useful).
 
 ## Stack
 
-- Next.js (static export) + React + TypeScript + Tailwind CSS
-- PDF.js for rendering
-- StPageFlip for page curls
+- **Next.js** (static export) + **React** + **TypeScript** + **Tailwind CSS**
+- **PDF.js** for rendering
+- **StPageFlip** (`page-flip`) for page curls
 - Web App Manifest + service worker for PWA
-- Capacitor for the Android wrapper
+- **Capacitor** for the Android wrapper
 
 ## Scripts
 
@@ -72,5 +75,16 @@ When `public/downloads/bookly.apk` exists, the Install dialog shows a **Download
 | `npm run dev` | Dev server on port 4321 |
 | `npm run build` | Static export to `out/` |
 | `npm start` | Serve the export on port 4321 |
+| `npm run lint` | ESLint |
 | `npm run android:sync` | Build web assets and sync Capacitor |
 | `npm run android:build` | Sync + assemble debug APK |
+| `npm run android:open` | Open the Android project in Android Studio |
+| `npm run android:init` | First-time Capacitor Android setup |
+
+## Author
+
+**NITIN YADAV**
+
+- LinkedIn: [nitin-yadav-681850299](https://www.linkedin.com/in/nitin-yadav-681850299/)
+- GitHub: [nitinyadav2188](https://github.com/nitinyadav2188)
+- X: [@nitindotdev](https://x.com/nitindotdev)

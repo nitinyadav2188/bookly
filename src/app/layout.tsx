@@ -8,18 +8,21 @@ const display = Archivo_Black({
   variable: "--font-display",
   subsets: ["latin"],
   weight: "400",
+  display: "swap",
 });
 
 const ui = Space_Grotesk({
   variable: "--font-ui",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 const mono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
   weight: ["400", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -57,7 +60,7 @@ export const viewport: Viewport = {
 
 const bootSplashCriticalCss = `
 html,body{background:#fdfceb;margin:0;min-height:100%}
-#bookly-boot-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background-color:#fdfceb;background-image:linear-gradient(#e8e6d4 1px,transparent 1px),linear-gradient(90deg,#e8e6d4 1px,transparent 1px);background-size:28px 28px;transition:opacity .36s ease,visibility .36s ease}
+#bookly-boot-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background-color:#fdfceb;background-image:linear-gradient(#e8e6d4 1px,transparent 1px),linear-gradient(90deg,#e8e6d4 1px,transparent 1px);background-size:28px 28px;transition:opacity .28s ease,visibility .28s ease}
 #bookly-boot-splash.is-done{opacity:0;visibility:hidden;pointer-events:none}
 #bookly-boot-splash .boot-mark{display:flex;flex-direction:column;align-items:center;gap:16px;padding:0 16px}
 #bookly-boot-splash .boot-stage{display:flex;align-items:center;justify-content:center;width:188px;height:188px;background:#fff;border:3px solid #000;box-shadow:8px 8px 0 #000;position:relative}
@@ -101,7 +104,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${display.variable} ${ui.variable} ${mono.variable} h-full antialiased`}
     >
       <head>
-        <link rel="preload" href="/pdf.worker.min.mjs" as="script" />
+        {/* Prefetch (not preload) so the ~1.3MB worker never blocks window load / splash. */}
+        <link rel="prefetch" href="/pdf.worker.min.mjs" as="script" />
         {/* Critical first-paint styles — cream canvas + splash before CSS chunk loads */}
         <style
           dangerouslySetInnerHTML={{

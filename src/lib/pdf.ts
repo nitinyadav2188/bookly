@@ -34,11 +34,16 @@ export function isPdfFile(file: File): boolean {
 export function warmPdfWorker(): void {
   if (workerWarmStarted || typeof window === "undefined") return;
   workerWarmStarted = true;
-  void fetch("/pdf.worker.min.mjs", { credentials: "same-origin", cache: "force-cache" }).catch(
-    () => {
+  // Kick both HTTP cache and browser module/script cache; ignore failures.
+  void fetch("/pdf.worker.min.mjs", { credentials: "same-origin", cache: "force-cache" })
+    .then((res) => {
+      if (!res.ok) throw new Error("worker fetch failed");
+      // Drain body so the response is fully cached.
+      return res.arrayBuffer();
+    })
+    .catch(() => {
       workerWarmStarted = false;
-    },
-  );
+    });
 }
 
 function asUint8Array(data: ArrayBuffer): Uint8Array {

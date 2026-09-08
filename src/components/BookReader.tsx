@@ -299,18 +299,20 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         };
 
         // Size the host while the first pages paint — don't serialize the two waits.
+        // Prefer rAF (one frame) over fixed 50ms sleeps for faster readiness.
         const layoutReady = (async () => {
-          for (let attempt = 0; attempt < 30; attempt += 1) {
+          for (let attempt = 0; attempt < 40; attempt += 1) {
             const m = measure();
             if (m.availW >= 80 && m.availH >= 80 && m.pageWidth >= 120 && m.pageHeight >= 160) {
               return m;
             }
-            await new Promise((r) => window.setTimeout(r, 50));
+            await new Promise<void>((r) => requestAnimationFrame(() => r()));
             if (cancelled || !hostRef.current) return null;
           }
           return null;
         })();
 
+        // Block open only on landing page ±1; neighbors warm after mount.
         await ensurePagesRendered(startPage, 1);
         if (cancelled || !hostRef.current) return;
 
