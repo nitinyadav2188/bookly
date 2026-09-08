@@ -15,6 +15,11 @@ import {
   type PageHighlight,
   type PageNote,
 } from "@/lib/annotations";
+import {
+  downloadBookBundle,
+  saveLibraryBook,
+  updateLibraryProgress,
+} from "@/lib/library";
 import { loadPdfDocument, renderPdfPageToCanvas, type OpenedPdf } from "@/lib/pdf";
 import { getSavedPage, savePage } from "@/lib/session";
 import { playPageTurnSound, unlockPageSound } from "@/lib/sound";
@@ -144,9 +149,12 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const [annotsHydrated, setAnnotsHydrated] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [downloadFlash, setDownloadFlash] = useState<string | null>(null);
+  const [libraryHint, setLibraryHint] = useState<string | null>(null);
   const historyRef = useRef(createAnnotationHistory());
   const annotsRef = useRef({ highlights, notes });
   const noteEditBatchRef = useRef<Set<string>>(new Set());
+  const persistTimerRef = useRef<number | null>(null);
 
   soundOnRef.current = soundOn;
   zoomRef.current = zoom;
@@ -165,21 +173,76 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   }, [syncHistoryFlags]);
 
   useEffect(() => {
+    let cancelled = false;
     setAnnotsHydrated(false);
-    const data = loadAnnotations(doc.id);
-    setHighlights(data.highlights);
-    setNotes(data.notes);
-    setAnnotateMode(false);
-    historyRef.current.clear();
-    noteEditBatchRef.current.clear();
-    setCanUndo(false);
-    setCanRedo(false);
-    setAnnotsHydrated(true);
+    void (async () => {
+      let data = loadAnnotations(doc.id);
+      if (data.highlights.length === 0 && data.notes.length === 0) {
+        try {
+          const { getLibraryAnnotations } = await import("@/lib/library");
+          const fromLib = await getLibraryAnnotations(doc.id);
+          if (fromLib && (fromLib.highlights.length > 0 || fromLib.notes.length > 0)) {
+            data = fromLib;
+            saveAnnotations(doc.id, data);
+          }
+        } catch {
+          // ignore
+        }
+      }
+      if (cancelled) return;
+      setHighlights(data.highlights);
+      setNotes(data.notes);
+      setAnnotateMode(false);
+      historyRef.current.clear();
+      noteEditBatchRef.current.clear();
+      setCanUndo(false);
+      setCanRedo(false);
+      setAnnotsHydrated(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [doc.id]);
+
+  // Persist the PDF in IndexedDB for long-period resume (same browser).
+  useEffect(() => {
+    let cancelled = false;
+    setLibraryHint(null);
+    void (async () => {
+      const result = await saveLibraryBook({
+        id: doc.id,
+        name: doc.name,
+        data: doc.data,
+        pageCount: doc.pageCount,
+        lastPage: getSavedPage(doc.id) ?? 0,
+        annotations: loadAnnotations(doc.id),
+      });
+      if (cancelled) return;
+      if (result.ok && result.skipped) {
+        setLibraryHint("Book is too large to keep for resume — download a copy to keep it.");
+      } else if (!result.ok) {
+        setLibraryHint(
+          result.reason === "quota"
+            ? "Browser storage is full — download a copy to keep this book."
+            : "Couldn’t keep this book for resume — download a copy instead.",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [doc.id, doc.name, doc.data, doc.pageCount]);
 
   useEffect(() => {
     if (!annotsHydrated) return;
     saveAnnotations(doc.id, { highlights, notes });
+    if (persistTimerRef.current != null) window.clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = window.setTimeout(() => {
+      void updateLibraryProgress(doc.id, { annotations: { highlights, notes } });
+    }, 400);
+    return () => {
+      if (persistTimerRef.current != null) window.clearTimeout(persistTimerRef.current);
+    };
   }, [doc.id, highlights, notes, annotsHydrated]);
 
   const ensurePagesRendered = useCallback(
@@ -280,7 +343,15 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         }
         pdfRef.current = pdf;
 
-        const saved = getSavedPage(doc.id);
+        let saved = getSavedPage(doc.id);
+        if (saved == null) {
+          try {
+            const { getLibraryLastPage } = await import("@/lib/library");
+            saved = await getLibraryLastPage(doc.id);
+          } catch {
+            // ignore
+          }
+        }
         const startPage =
           saved != null && saved >= 0 && saved < doc.pageCount ? saved : 0;
         if (saved != null && saved > 0) {
@@ -392,11 +463,12 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         readyRef.current = true;
         setStatus("");
 
-        flip.on("flip", (e) => {
+          flip.on("flip", (e) => {
           const index = Number(e.data);
           setPageIndex(index);
           setJumpDraft(String(index + 1));
           savePage(doc.id, index);
+          void updateLibraryProgress(doc.id, { lastPage: index });
           const shouldSound =
             soundOnRef.current &&
             index !== lastIndexRef.current &&
@@ -473,6 +545,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         setPageIndex(index);
         setJumpDraft(String(clamped));
         savePage(doc.id, index);
+        void updateLibraryProgress(doc.id, { lastPage: index });
         void ensurePagesRendered(index);
       } catch {
         // ignore
@@ -481,6 +554,22 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     },
     [doc.id, doc.pageCount, ensurePagesRendered],
   );
+
+  const handleDownload = useCallback(() => {
+    try {
+      const bundle = downloadBookBundle(doc, { highlights, notes });
+      setDownloadFlash(
+        bundle.annotationsName
+          ? `Saved ${bundle.pdfName} + notes`
+          : `Saved ${bundle.pdfName}`,
+      );
+      window.setTimeout(() => setDownloadFlash(null), 3200);
+    } catch (err) {
+      console.error(err);
+      setDownloadFlash("Download failed");
+      window.setTimeout(() => setDownloadFlash(null), 3200);
+    }
+  }, [doc, highlights, notes]);
 
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -797,11 +886,26 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
               Continue from page {resumeHint}
             </p>
           ) : null}
+          {downloadFlash ? (
+            <p className="font-mono-label text-[9px] text-black/80">{downloadFlash}</p>
+          ) : null}
+          {libraryHint && !downloadFlash ? (
+            <p className="font-mono-label text-[9px] text-black/70">{libraryHint}</p>
+          ) : null}
           {markedFlash ? (
             <p className="font-mono-label text-[9px] text-black/80">marked ✨</p>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="border-[3px] border-black bg-orange px-3 py-2 font-display text-sm text-black shadow-[3px_3px_0_#000]"
+            aria-label="Download book"
+            title="Download PDF to keep"
+          >
+            Download
+          </button>
           <button
             type="button"
             onClick={() => setAnnotateMode((v) => !v)}

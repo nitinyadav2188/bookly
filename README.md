@@ -10,8 +10,10 @@ Built by **[NITIN YADAV](https://www.linkedin.com/in/nitin-yadav-681850299/)** �
 - **Realistic page flips** via [StPageFlip](https://github.com/Nodlik/StPageFlip)
 - **Local PDF rendering** with PDF.js (files never leave the browser)
 - **In-reader annotations** — highlights and sticky notes, saved per document in the browser
+- **Download** — keep the original PDF on your device (plus a notes sidecar when you have annotations)
+- **Local resume** — the last book is kept in IndexedDB so you can continue reading without re-uploading
 - **Page-turn sound** (off until you enable it)
-- **Session memory** of the last page for the same file
+- **Page memory** of the last page for the same file
 - **PWA install** for mobile home-screen use
 - **Capacitor Android** packaging from the same static export
 
@@ -29,7 +31,7 @@ For local iteration you can also run `npm run dev` (Next.js Turbopack). Prefer `
 
 ## Privacy
 
-Your PDF stays private. Bookly opens and renders files **locally in the browser**. Nothing is uploaded to a server. Closing the tab clears the document; only the last page index (and optional annotations) are kept in browser storage for the current session / origin.
+Your PDF stays private. Bookly opens and renders files **locally in the browser**. Nothing is uploaded to a server. Use **Download** to save the PDF to your device. This browser can also keep a local IndexedDB copy (with annotations) so you can continue reading later — still on your machine, never in the cloud.
 
 ## Install on phone
 

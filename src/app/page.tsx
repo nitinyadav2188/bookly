@@ -15,6 +15,14 @@ import {
   warmApkCheck,
   type BeforeInstallPromptEvent,
 } from "@/lib/install";
+import {
+  getLatestLibraryMeta,
+  getLibraryBook,
+  openLibraryBook,
+  type LibraryBookMeta,
+} from "@/lib/library";
+import { saveAnnotations } from "@/lib/annotations";
+import { savePage } from "@/lib/session";
 
 type Screen = "home" | "processing" | "reader";
 
@@ -24,10 +32,16 @@ export default function HomePage() {
   const [installOpen, setInstallOpen] = useState(false);
   const [installFallback, setInstallFallback] = useState(false);
   const [bookDoc, setBookDoc] = useState<OpenedPdf | null>(null);
+  const [savedBook, setSavedBook] = useState<LibraryBookMeta | null>(null);
   const [prepareName, setPrepareName] = useState<string | undefined>();
   const [preparePhase, setPreparePhase] = useState<"preparing" | "rendering">("preparing");
   const [prepareError, setPrepareError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const refreshSavedBook = useCallback(async () => {
+    const meta = await getLatestLibraryMeta();
+    setSavedBook(meta);
+  }, []);
 
   useEffect(() => {
     const onBeforeInstall = (event: Event) => {
@@ -43,6 +57,7 @@ export default function HomePage() {
     // (idle can fire late on busy main threads and delays first open).
     warmPdfWorker();
     warmApkCheck();
+    void refreshSavedBook();
 
     // Register SW after first paint so install/activate never contends with boot.
     const registerSw = () => {
@@ -58,7 +73,7 @@ export default function HomePage() {
     }
     const t = window.setTimeout(registerSw, 1200);
     return () => window.clearTimeout(t);
-  }, []);
+  }, [refreshSavedBook]);
 
   const handleInstall = useCallback(async () => {
     const result = await startInstallFlow();
@@ -111,6 +126,36 @@ export default function HomePage() {
     }
   }, []);
 
+  const resumeSavedBook = useCallback(async () => {
+    if (!savedBook) return;
+    setPrepareName(savedBook.name);
+    setPrepareError(null);
+    setPreparePhase("preparing");
+    setScreen("processing");
+
+    try {
+      const opened = await openLibraryBook(savedBook.id);
+      if (!opened) {
+        throw new Error("missing");
+      }
+      // Restore page + annotations into helpers used by the reader.
+      savePage(opened.id, savedBook.lastPage ?? 0);
+      const record = await getLibraryBook(savedBook.id);
+      if (record?.annotations) {
+        saveAnnotations(opened.id, record.annotations);
+      }
+      setPreparePhase("rendering");
+      setBookDoc(opened);
+      setScreen("reader");
+    } catch (err) {
+      console.error(err);
+      setPrepareError("Couldn’t resume that book. Upload the PDF again.");
+      setSavedBook(null);
+      setScreen("home");
+      void refreshSavedBook();
+    }
+  }, [savedBook, refreshSavedBook]);
+
   const onNativeFile = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -130,10 +175,20 @@ export default function HomePage() {
         document={bookDoc}
         onExit={() => {
           setScreen("home");
+          void refreshSavedBook();
         }}
       />
     );
   }
+
+  const continueTarget = savedBook ?? (bookDoc
+    ? {
+        id: bookDoc.id,
+        name: bookDoc.name,
+        pageCount: bookDoc.pageCount,
+        lastPage: 0,
+      }
+    : null);
 
   return (
     <div id="top" className="min-h-screen">
@@ -199,13 +254,19 @@ export default function HomePage() {
                 </p>
               ) : null}
 
-              {bookDoc ? (
+              {continueTarget ? (
                 <button
                   type="button"
-                  onClick={() => setScreen("reader")}
+                  onClick={() => {
+                    if (savedBook) {
+                      void resumeSavedBook();
+                    } else {
+                      setScreen("reader");
+                    }
+                  }}
                   className="nb-btn nb-btn-orange mt-4 text-sm"
                 >
-                  Resume {bookDoc.name}
+                  Continue reading {continueTarget.name}
                 </button>
               ) : null}
             </div>
@@ -256,7 +317,7 @@ export default function HomePage() {
                 {
                   step: "03",
                   title: "Turn and read",
-                  copy: "Swipe or click to flip — with a subtle paper sound if you want it.",
+                  copy: "Swipe or click to flip — download a copy anytime to keep reading offline.",
                   color: "bg-pink text-white",
                 },
               ].map((item) => (
@@ -281,8 +342,8 @@ export default function HomePage() {
             </h2>
             <p className="mt-5 text-base leading-relaxed text-white/75">
               Bookly processes files locally in your browser. Nothing is uploaded to a server.
-              Close the tab and the file leaves with it — only your last page is remembered for
-              this browser session.
+              Download saves the PDF to your device. This browser can also keep a local copy so you
+              can continue reading later — still on your machine, never in the cloud.
             </p>
           </div>
         </section>

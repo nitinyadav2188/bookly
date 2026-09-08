@@ -1,9 +1,9 @@
-const PREFIX = "bookly:page:";
+const SESSION_PREFIX = "bookly:page:";
+const LOCAL_PREFIX = "bookly:page:v1:";
 
-export function getSavedPage(documentId: string): number | null {
-  if (typeof window === "undefined") return null;
+function readStorage(storage: Storage, key: string): number | null {
   try {
-    const raw = sessionStorage.getItem(PREFIX + documentId);
+    const raw = storage.getItem(key);
     if (!raw) return null;
     const page = Number(raw);
     return Number.isFinite(page) && page >= 0 ? page : null;
@@ -12,19 +12,38 @@ export function getSavedPage(documentId: string): number | null {
   }
 }
 
+export function getSavedPage(documentId: string): number | null {
+  if (typeof window === "undefined") return null;
+  // Prefer durable localStorage (long-period resume), then session fallback.
+  const local = readStorage(localStorage, LOCAL_PREFIX + documentId);
+  if (local != null) return local;
+  return readStorage(sessionStorage, SESSION_PREFIX + documentId);
+}
+
 export function savePage(documentId: string, pageIndex: number): void {
   if (typeof window === "undefined") return;
+  const value = String(Math.max(0, pageIndex));
   try {
-    sessionStorage.setItem(PREFIX + documentId, String(Math.max(0, pageIndex)));
+    localStorage.setItem(LOCAL_PREFIX + documentId, value);
   } catch {
-    // ignore quota / private mode
+    // quota / private mode
+  }
+  try {
+    sessionStorage.setItem(SESSION_PREFIX + documentId, value);
+  } catch {
+    // ignore
   }
 }
 
 export function clearSavedPage(documentId: string): void {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.removeItem(PREFIX + documentId);
+    sessionStorage.removeItem(SESSION_PREFIX + documentId);
+  } catch {
+    // ignore
+  }
+  try {
+    localStorage.removeItem(LOCAL_PREFIX + documentId);
   } catch {
     // ignore
   }
