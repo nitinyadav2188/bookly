@@ -24,7 +24,7 @@ export function UploadModal({ open, onClose, onFile }: UploadModalProps) {
     (file: File | undefined | null) => {
       if (!file) return;
       if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-        setError("PDF ONLY. TRY AGAIN.");
+        setError("Please choose a PDF file.");
         return;
       }
       setError(null);
@@ -89,7 +89,10 @@ export function UploadModal({ open, onClose, onFile }: UploadModalProps) {
             type="file"
             accept="application/pdf,.pdf"
             className="sr-only"
-            onChange={(e) => acceptFile(e.target.files?.[0])}
+            onChange={(e) => {
+              acceptFile(e.target.files?.[0]);
+              e.target.value = "";
+            }}
           />
           <span className="mb-3 flex h-12 w-12 items-center justify-center border-[3px] border-black bg-blue font-display text-2xl text-white shadow-[3px_3px_0_#000]">
             +

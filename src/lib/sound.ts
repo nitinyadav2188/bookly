@@ -5,13 +5,13 @@ function getAudio(): HTMLAudioElement {
   if (!audio) {
     audio = new Audio("/sounds/page-turn.wav");
     audio.preload = "auto";
-    audio.volume = 0.28;
+    audio.volume = 0.32;
   }
   return audio;
 }
 
 /** Browsers require a user gesture before audio can play. */
-export async function unlockPageSound(): Promise<void> {
+export async function unlockPageSound(): Promise<boolean> {
   try {
     const el = getAudio();
     el.muted = true;
@@ -20,8 +20,10 @@ export async function unlockPageSound(): Promise<void> {
     el.currentTime = 0;
     el.muted = false;
     unlocked = true;
+    return true;
   } catch {
     unlocked = false;
+    return false;
   }
 }
 
@@ -29,9 +31,10 @@ export function playPageTurnSound(enabled: boolean): void {
   if (!enabled || !unlocked) return;
   try {
     const el = getAudio();
+    el.pause();
     el.currentTime = 0;
     void el.play().catch(() => {
-      // autoplay / gesture restrictions
+      // gesture / autoplay restrictions
     });
   } catch {
     // ignore

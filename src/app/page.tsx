@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Header } from "@/components/Header";
 import { HeroBook } from "@/components/HeroBook";
 import { UploadModal } from "@/components/UploadModal";
 import { InstallModal } from "@/components/InstallModal";
 import { PreparingBook } from "@/components/PreparingBook";
 import { BookReader } from "@/components/BookReader";
-import { openPdfFromFile, type OpenedPdf } from "@/lib/pdf";
+import { openPdfFromFile, isPdfFile, PdfOpenError, type OpenedPdf } from "@/lib/pdf";
 import {
   captureInstallPrompt,
   type BeforeInstallPromptEvent,
@@ -19,9 +19,11 @@ export default function HomePage() {
   const [screen, setScreen] = useState<Screen>("home");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
-  const [document, setDocument] = useState<OpenedPdf | null>(null);
+  const [bookDoc, setBookDoc] = useState<OpenedPdf | null>(null);
   const [prepareName, setPrepareName] = useState<string | undefined>();
+  const [preparePhase, setPreparePhase] = useState<"preparing" | "rendering">("preparing");
   const [prepareError, setPrepareError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const onBeforeInstall = (event: Event) => {
@@ -40,7 +42,12 @@ export default function HomePage() {
     }
   }, []);
 
-  const openUpload = useCallback(() => {
+  const openFilePicker = useCallback(() => {
+    setPrepareError(null);
+    fileInputRef.current?.click();
+  }, []);
+
+  const openUploadModal = useCallback(() => {
     setPrepareError(null);
     setUploadOpen(true);
   }, []);
@@ -49,29 +56,47 @@ export default function HomePage() {
     setUploadOpen(false);
     setPrepareName(file.name);
     setPrepareError(null);
+    setPreparePhase("preparing");
     setScreen("processing");
 
     try {
+      if (!isPdfFile(file)) {
+        throw new PdfOpenError("Please choose a PDF file.");
+      }
       const opened = await openPdfFromFile(file);
-      await new Promise((r) => setTimeout(r, 450));
-      setDocument(opened);
+      setPreparePhase("rendering");
+      await new Promise((r) => setTimeout(r, 350));
+      setBookDoc(opened);
       setScreen("reader");
     } catch (err) {
       console.error(err);
-      setPrepareError("Could not read that PDF. Please try another file.");
+      const message =
+        err instanceof PdfOpenError
+          ? err.message
+          : "We couldn't open this PDF.";
+      setPrepareError(message);
       setScreen("home");
       setUploadOpen(true);
     }
   }, []);
 
+  const onNativeFile = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (file) void handleFile(file);
+    },
+    [handleFile],
+  );
+
   if (screen === "processing") {
-    return <PreparingBook fileName={prepareName} />;
+    return <PreparingBook fileName={prepareName} phase={preparePhase} />;
   }
 
-  if (screen === "reader" && document) {
+  if (screen === "reader" && bookDoc) {
     return (
       <BookReader
-        document={document}
+        document={bookDoc}
         onExit={() => {
           setScreen("home");
         }}
@@ -81,10 +106,19 @@ export default function HomePage() {
 
   return (
     <div id="top" className="min-h-screen">
-      <Header onUpload={openUpload} onInstall={() => setInstallOpen(true)} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="sr-only"
+        onChange={onNativeFile}
+        aria-hidden
+        tabIndex={-1}
+      />
+
+      <Header onUpload={openFilePicker} onInstall={() => setInstallOpen(true)} />
 
       <main>
-        {/* Black hero — Vouch-style */}
         <section className="border-b-[3px] border-black bg-black text-white">
           <div className="bookly-container grid items-center gap-12 py-14 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 lg:py-16">
             <div className="max-w-2xl">
@@ -98,7 +132,7 @@ export default function HomePage() {
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-3">
-                <button type="button" onClick={openUpload} className="nb-btn nb-btn-lime text-sm">
+                <button type="button" onClick={openFilePicker} className="nb-btn nb-btn-lime text-sm">
                   Upload PDF →
                 </button>
                 <button
@@ -110,10 +144,28 @@ export default function HomePage() {
                 </button>
               </div>
 
+              <button
+                type="button"
+                onClick={openUploadModal}
+                className="mt-4 font-mono-label text-[10px] font-bold text-white/55 underline-offset-4 hover:text-white hover:underline"
+              >
+                Or drop a PDF here
+              </button>
+
               {prepareError ? (
                 <p className="mt-4 border-[3px] border-black bg-pink px-3 py-2 font-display text-sm text-white">
                   {prepareError}
                 </p>
+              ) : null}
+
+              {bookDoc ? (
+                <button
+                  type="button"
+                  onClick={() => setScreen("reader")}
+                  className="nb-btn nb-btn-orange mt-4 text-sm"
+                >
+                  Resume {bookDoc.name}
+                </button>
               ) : null}
             </div>
 
@@ -123,7 +175,32 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Color feature grid */}
+        <section
+          className="border-b-[3px] border-black bg-cream px-4 py-10"
+          onDragOver={(e) => {
+            e.preventDefault();
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const file = e.dataTransfer.files?.[0];
+            if (file) void handleFile(file);
+          }}
+        >
+          <div className="bookly-container">
+            <button
+              type="button"
+              onClick={openUploadModal}
+              className="flex w-full flex-col items-center justify-center border-[3px] border-dashed border-black bg-white px-6 py-10 text-center shadow-[6px_6px_0_#000]"
+            >
+              <span className="mb-3 flex h-12 w-12 items-center justify-center border-[3px] border-black bg-blue font-display text-2xl text-white shadow-[3px_3px_0_#000]">
+                +
+              </span>
+              <p className="font-display text-xl text-black">Drop your PDF here</p>
+              <p className="mt-2 font-mono-label text-[10px] text-black/50">or click to choose</p>
+            </button>
+          </div>
+        </section>
+
         <section className="border-b-[3px] border-black">
           <div className="grid sm:grid-cols-2">
             {[
@@ -134,7 +211,7 @@ export default function HomePage() {
             ].map((tile) => (
               <div
                 key={tile.title}
-                className={`feature-tile rounded-none border-0 border-b-[3px] border-black sm:border-r-[3px] sm:odd:border-r-[3px] ${tile.color}`}
+                className={`feature-tile rounded-none border-0 border-b-[3px] border-black sm:border-r-[3px] ${tile.color}`}
               >
                 <p className="eyebrow">{tile.label}</p>
                 <h3>{tile.title}</h3>

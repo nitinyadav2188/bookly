@@ -9,49 +9,93 @@ export type OpenedPdf = {
   pageCount: number;
 };
 
+export class PdfOpenError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PdfOpenError";
+  }
+}
+
 export function makeDocumentId(file: File): string {
   return `${file.name}::${file.size}::${file.lastModified}`;
 }
 
+export function isPdfFile(file: File): boolean {
+  const name = file.name.toLowerCase();
+  return file.type === "application/pdf" || name.endsWith(".pdf");
+}
+
+function asUint8Array(data: ArrayBuffer): Uint8Array {
+  return new Uint8Array(data.slice(0));
+}
+
 export async function openPdfFromFile(file: File): Promise<OpenedPdf> {
-  const data = await file.arrayBuffer();
-  const pdf = await getDocument({ data: data.slice(0) }).promise;
-  const pageCount = pdf.numPages;
-  await pdf.cleanup();
-  return {
-    id: makeDocumentId(file),
-    name: file.name,
-    data,
-    pageCount,
-  };
+  if (!isPdfFile(file)) {
+    throw new PdfOpenError("Please choose a PDF file.");
+  }
+
+  let data: ArrayBuffer;
+  try {
+    data = await file.arrayBuffer();
+  } catch {
+    throw new PdfOpenError("We couldn't open this PDF.");
+  }
+
+  if (!data || data.byteLength < 5) {
+    throw new PdfOpenError("We couldn't open this PDF.");
+  }
+
+  try {
+    const pdf = await getDocument({ data: asUint8Array(data) }).promise;
+    const pageCount = pdf.numPages;
+    if (!pageCount || pageCount < 1) {
+      await pdf.destroy();
+      throw new PdfOpenError("We couldn't open this PDF.");
+    }
+    await pdf.destroy();
+    return {
+      id: makeDocumentId(file),
+      name: file.name,
+      // Keep an owned copy — pdf.js may detach transferred buffers
+      data: data.slice(0),
+      pageCount,
+    };
+  } catch (err) {
+    if (err instanceof PdfOpenError) throw err;
+    throw new PdfOpenError("We couldn't open this PDF.");
+  }
 }
 
 export async function loadPdfDocument(data: ArrayBuffer): Promise<PDFDocumentProxy> {
-  return getDocument({ data: data.slice(0) }).promise;
+  return getDocument({ data: asUint8Array(data) }).promise;
 }
 
 export async function renderPdfPageToCanvas(
   pdf: PDFDocumentProxy,
   pageNumber: number,
   target: HTMLCanvasElement,
-  maxEdge = 1400,
+  maxEdge = 1600,
 ): Promise<void> {
   const page = await pdf.getPage(pageNumber);
   const base = page.getViewport({ scale: 1 });
-  const scale = Math.min(maxEdge / base.width, maxEdge / base.height, 2.2);
+  const scale = Math.min(maxEdge / base.width, maxEdge / base.height, 2.4);
   const viewport = page.getViewport({ scale });
   const context = target.getContext("2d", { alpha: false });
-  if (!context) return;
+  if (!context) {
+    throw new Error("Canvas unavailable");
+  }
 
-  target.width = Math.floor(viewport.width);
-  target.height = Math.floor(viewport.height);
+  const width = Math.floor(viewport.width);
+  const height = Math.floor(viewport.height);
+  target.width = width;
+  target.height = height;
 
-  context.fillStyle = "#fffcf7";
-  context.fillRect(0, 0, target.width, target.height);
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, width, height);
 
+  // pdfjs 4.x uses canvasContext + viewport
   await page.render({
     canvasContext: context,
     viewport,
-    canvas: target,
   }).promise;
 }

@@ -357,12 +357,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  will-change: transform;
 }
 
 .reader-book-host .stf__parent,
 .reader-book-host .stf__wrapper {
   margin: 0 auto;
-  border: 3px solid #000;
+}
+
+.reader-book-host .stf__block {
   box-shadow: 8px 8px 0 #c8f542;
 }
 
@@ -388,6 +391,21 @@ body {
       #f0f0f0 18px,
       #f0f0f0 20px
     );
+}
+
+.book-page.render-error::after {
+  content: attr(data-error);
+  position: absolute;
+  inset: 12%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 12px;
+  color: #000;
+  background: #c8f542;
+  border: 3px solid #000;
+  padding: 12px;
 }
 
 .reader-controls {
