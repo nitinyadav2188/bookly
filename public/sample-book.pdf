@@ -1,0 +1,42 @@
+%PDF-1.4
+1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj
+2 0 obj<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R] /Count 4 >>endobj
+3 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj
+4 0 obj<< /Length 42 >>stream
+BT /F1 24 Tf 72 720 Td (Chapter One) Tj ET
+endstream
+endobj
+5 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources<< /Font<< /F1 3 0 R >> >> >>endobj
+6 0 obj<< /Length 48 >>stream
+BT /F1 24 Tf 72 720 Td (A quiet afternoon) Tj ET
+endstream
+endobj
+7 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 6 0 R /Resources<< /Font<< /F1 3 0 R >> >> >>endobj
+8 0 obj<< /Length 44 >>stream
+BT /F1 24 Tf 72 720 Td (Turning pages) Tj ET
+endstream
+endobj
+9 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 8 0 R /Resources<< /Font<< /F1 3 0 R >> >> >>endobj
+10 0 obj<< /Length 44 >>stream
+BT /F1 24 Tf 72 720 Td (The last leaf) Tj ET
+endstream
+endobj
+11 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 10 0 R /Resources<< /Font<< /F1 3 0 R >> >> >>endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000056 00000 n 
+0000000130 00000 n 
+0000000198 00000 n 
+0000000288 00000 n 
+0000000410 00000 n 
+0000000506 00000 n 
+0000000628 00000 n 
+0000000720 00000 n 
+0000000842 00000 n 
+0000000935 00000 n 
+trailer<< /Size 12 /Root 1 0 R >>
+startxref
+1059
+%%EOF

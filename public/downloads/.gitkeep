@@ -1,0 +1,2 @@
+# Place a built APK here as bookly.apk to enable the Install modal download button.
+# Build with: npm run android:build
