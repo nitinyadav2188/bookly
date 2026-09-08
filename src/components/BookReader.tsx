@@ -11,11 +11,46 @@ import { playPageTurnSound, unlockPageSound } from "@/lib/sound";
 
 const SIZE_STRETCH = "stretch" as const;
 const CORNER_BOTTOM = "bottom" as const;
+const SWIPE_DISTANCE = 45;
+const SWIPE_TIMEOUT_MS = 280;
+const DRAG_THRESHOLD = 8;
 
 type BookReaderProps = {
   document: OpenedPdf;
   onExit: () => void;
 };
+
+type GesturePoint = { x: number; y: number };
+
+/** Touch-primary (phone/tablet) vs mouse-primary (laptop/desktop). */
+function useTouchPrimary(breakpoint = 768) {
+  const [touchPrimary, setTouchPrimary] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return (
+      window.matchMedia(`(max-width: ${breakpoint - 1}px)`).matches ||
+      window.matchMedia("(pointer: coarse)").matches ||
+      window.matchMedia("(hover: none)").matches
+    );
+  });
+
+  useEffect(() => {
+    const queries = [
+      window.matchMedia(`(max-width: ${breakpoint - 1}px)`),
+      window.matchMedia("(pointer: coarse)"),
+      window.matchMedia("(hover: none)"),
+    ];
+    const update = () => {
+      setTouchPrimary(queries.some((q) => q.matches));
+    };
+    update();
+    for (const q of queries) q.addEventListener("change", update);
+    return () => {
+      for (const q of queries) q.removeEventListener("change", update);
+    };
+  }, [breakpoint]);
+
+  return touchPrimary;
+}
 
 function useIsNarrow(breakpoint = 768) {
   const [narrow, setNarrow] = useState(
@@ -31,6 +66,11 @@ function useIsNarrow(breakpoint = 768) {
   return narrow;
 }
 
+function clientToBookPos(flip: PageFlip, clientX: number, clientY: number): GesturePoint {
+  const rect = flip.getUI().getDistElement().getBoundingClientRect();
+  return { x: clientX - rect.left, y: clientY - rect.top };
+}
+
 export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const pagesRef = useRef<HTMLDivElement>(null);
@@ -42,9 +82,19 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const lastIndexRef = useRef(0);
   const ignoreSoundUntilRef = useRef(0);
   const zoomRef = useRef(1);
+  const readyRef = useRef(false);
+  const gestureRef = useRef<{
+    pointerId: number;
+    startClient: GesturePoint;
+    startBook: GesturePoint;
+    startTime: number;
+    moved: boolean;
+    folding: boolean;
+  } | null>(null);
 
   const isNarrow = useIsNarrow();
-  const layoutKey = isNarrow ? "portrait" : "landscape";
+  const touchPrimary = useTouchPrimary();
+  const layoutKey = `${isNarrow ? "portrait" : "landscape"}-${touchPrimary ? "touch" : "mouse"}`;
 
   const [pageIndex, setPageIndex] = useState(0);
   const [soundOn, setSoundOn] = useState(false);
@@ -59,6 +109,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
 
   soundOnRef.current = soundOn;
   zoomRef.current = zoom;
+  readyRef.current = ready;
 
   const ensurePagesRendered = useCallback(
     async (centerIndex: number) => {
@@ -110,6 +161,23 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     [doc.pageCount, isNarrow],
   );
 
+  const canAnimateFlip = useCallback(() => {
+    const flip = flipRef.current;
+    if (!readyRef.current || !flip) return false;
+    const state = flip.getState();
+    return state === "read" || state === "fold_corner";
+  }, []);
+
+  const goPrev = useCallback(() => {
+    if (!canAnimateFlip()) return;
+    flipRef.current?.flipPrev(CORNER_BOTTOM as never);
+  }, [canAnimateFlip]);
+
+  const goNext = useCallback(() => {
+    if (!canAnimateFlip()) return;
+    flipRef.current?.flipNext(CORNER_BOTTOM as never);
+  }, [canAnimateFlip]);
+
   useEffect(() => {
     let cancelled = false;
     let hideTimer: number | undefined;
@@ -119,6 +187,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     async function setup() {
       try {
         setReady(false);
+        readyRef.current = false;
         setError(null);
         setStatus("Opening book…");
         renderedRef.current = new Set();
@@ -192,6 +261,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
 
         ignoreSoundUntilRef.current = Date.now() + 900;
 
+        // Touch: we drive gestures via the overlay (useMouseEvents false) so tap
+        // zones don't fight native handlers. Desktop: StPageFlip mouse drag + buttons.
         flip = new PageFlip(host, {
           width: pageWidth,
           height: pageHeight,
@@ -204,13 +275,14 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           maxShadowOpacity: 0.5,
           showCover: false,
           mobileScrollSupport: false,
-          swipeDistance: 30,
+          swipeDistance: SWIPE_DISTANCE,
           flippingTime: 650,
           usePortrait: true,
           autoSize: true,
           startPage,
-          useMouseEvents: true,
-          disableFlipByClick: false,
+          useMouseEvents: !touchPrimary,
+          disableFlipByClick: true,
+          showPageCorners: !touchPrimary,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
 
@@ -220,6 +292,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         setPageIndex(startPage);
         setJumpDraft(String(startPage + 1));
         setReady(true);
+        readyRef.current = true;
         setStatus("");
 
         flip.on("flip", (e) => {
@@ -279,6 +352,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       window.removeEventListener("touchstart", revealChrome);
       resizeObserver?.disconnect();
       flipRef.current = null;
+      gestureRef.current = null;
       try {
         flip?.destroy();
       } catch {
@@ -287,15 +361,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       void pdfRef.current?.destroy();
       pdfRef.current = null;
     };
-  }, [doc.id, doc.data, doc.pageCount, isNarrow, layoutKey, ensurePagesRendered]);
-
-  const goPrev = useCallback(() => {
-    flipRef.current?.flipPrev(CORNER_BOTTOM as never);
-  }, []);
-
-  const goNext = useCallback(() => {
-    flipRef.current?.flipNext(CORNER_BOTTOM as never);
-  }, []);
+  }, [doc.id, doc.data, doc.pageCount, isNarrow, touchPrimary, layoutKey, ensurePagesRendered]);
 
   const jumpToPage = useCallback(
     (raw: string) => {
@@ -343,9 +409,111 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     setZoom((z) => Math.min(1.6, Math.max(0.7, Math.round((z + delta) * 100) / 100)));
   }, []);
 
-  // Keyboard navigation
+  // Mobile / tablet: finger-follow drag + half-page taps via gesture layer
+  const onGesturePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!touchPrimary || !readyRef.current) return;
+      const flip = flipRef.current;
+      if (!flip) return;
+      if (flip.getState() === "flipping") return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+
+      const startBook = clientToBookPos(flip, e.clientX, e.clientY);
+      gestureRef.current = {
+        pointerId: e.pointerId,
+        startClient: { x: e.clientX, y: e.clientY },
+        startBook,
+        startTime: Date.now(),
+        moved: false,
+        folding: false,
+      };
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    [touchPrimary],
+  );
+
+  const onGesturePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const gesture = gestureRef.current;
+      const flip = flipRef.current;
+      if (!gesture || !flip || gesture.pointerId !== e.pointerId) return;
+
+      const dx = e.clientX - gesture.startClient.x;
+      const dy = e.clientY - gesture.startClient.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > DRAG_THRESHOLD) {
+        gesture.moved = true;
+        const pos = clientToBookPos(flip, e.clientX, e.clientY);
+        if (!gesture.folding) {
+          flip.startUserTouch(gesture.startBook);
+          gesture.folding = true;
+        }
+        flip.userMove(pos, true);
+      }
+    },
+    [],
+  );
+
+  const endGesture = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>, cancelled = false) => {
+      const gesture = gestureRef.current;
+      const flip = flipRef.current;
+      if (!gesture || gesture.pointerId !== e.pointerId) return;
+      gestureRef.current = null;
+
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+
+      if (!flip || cancelled) {
+        if (flip && gesture.folding) {
+          const pos = clientToBookPos(flip, e.clientX, e.clientY);
+          flip.userStop(pos, true);
+        }
+        return;
+      }
+
+      const pos = clientToBookPos(flip, e.clientX, e.clientY);
+      const dx = e.clientX - gesture.startClient.x;
+      const dy = e.clientY - gesture.startClient.y;
+      const elapsed = Date.now() - gesture.startTime;
+      const isSwipe =
+        Math.abs(dx) > SWIPE_DISTANCE &&
+        Math.abs(dy) < SWIPE_DISTANCE * 2 &&
+        elapsed < SWIPE_TIMEOUT_MS;
+
+      if (isSwipe) {
+        // One swipe → at most one page; cancel any in-progress fold first
+        if (gesture.folding) flip.userStop(pos, true);
+        if (!canAnimateFlip()) return;
+        if (dx < 0) flip.flipNext(CORNER_BOTTOM as never);
+        else flip.flipPrev(CORNER_BOTTOM as never);
+        return;
+      }
+
+      if (gesture.folding) {
+        // Finger-follow release: complete or snap back
+        flip.userStop(pos, false);
+        return;
+      }
+
+      // Tap: left half previous, right half next
+      if (!gesture.moved && canAnimateFlip()) {
+        const layer = e.currentTarget.getBoundingClientRect();
+        const mid = layer.left + layer.width / 2;
+        if (e.clientX < mid) flip.flipPrev(CORNER_BOTTOM as never);
+        else flip.flipNext(CORNER_BOTTOM as never);
+      }
+    },
+    [canAnimateFlip],
+  );
+
+  // Keyboard navigation (desktop-primary; still works on touch devices with keyboards)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (!readyRef.current) return;
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
 
@@ -368,6 +536,18 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [goNext, goPrev, bumpZoom]);
+
+  // Block background page scroll while the reader is open
+  useEffect(() => {
+    const prevOverflow = window.document.body.style.overflow;
+    const prevOverscroll = window.document.documentElement.style.overscrollBehavior;
+    window.document.body.style.overflow = "hidden";
+    window.document.documentElement.style.overscrollBehavior = "none";
+    return () => {
+      window.document.body.style.overflow = prevOverflow;
+      window.document.documentElement.style.overscrollBehavior = prevOverscroll;
+    };
+  }, []);
 
   // Capacitor / Android back button
   useEffect(() => {
@@ -393,7 +573,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const pageLabel = `${pageIndex + 1} / ${doc.pageCount}`;
 
   return (
-    <div className="reader-shell">
+    <div className={`reader-shell ${touchPrimary ? "is-touch" : "is-desktop"}`}>
       <div
         className={`reader-controls absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-3 py-3 sm:px-4 ${
           chromeVisible ? "visible-chrome" : "hidden-chrome"
@@ -473,16 +653,54 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           </p>
         ) : null}
 
+        {!touchPrimary && ready ? (
+          <button
+            type="button"
+            onClick={goPrev}
+            disabled={pageIndex <= 0}
+            className="reader-edge-nav reader-edge-prev"
+            aria-label="Previous page"
+          >
+            ← Prev
+          </button>
+        ) : null}
+
         <div
-          className="reader-book-host"
+          className={`reader-book-host ${ready ? "is-ready" : ""}`}
           style={{
             visibility: ready ? "visible" : "hidden",
             transform: `scale(${zoom})`,
             transformOrigin: "center center",
           }}
         >
-          <div ref={hostRef} className="h-full w-full" />
+          <div key={layoutKey} ref={hostRef} className="h-full w-full" />
+
+          {touchPrimary && ready ? (
+            <div
+              className="reader-gesture-layer"
+              onPointerDown={onGesturePointerDown}
+              onPointerMove={onGesturePointerMove}
+              onPointerUp={(e) => endGesture(e, false)}
+              onPointerCancel={(e) => endGesture(e, true)}
+              role="presentation"
+            >
+              <div className="reader-tap-zone reader-tap-prev" aria-hidden />
+              <div className="reader-tap-zone reader-tap-next" aria-hidden />
+            </div>
+          ) : null}
         </div>
+
+        {!touchPrimary && ready ? (
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={pageIndex >= doc.pageCount - 1}
+            className="reader-edge-nav reader-edge-next"
+            aria-label="Next page"
+          >
+            Next →
+          </button>
+        ) : null}
 
         <div
           key={`${doc.id}-${layoutKey}`}
@@ -509,14 +727,16 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         }`}
       >
         <div className="flex items-center gap-0 border-[3px] border-black bg-white shadow-[5px_5px_0_#c8f542]">
-          <button
-            type="button"
-            onClick={goPrev}
-            disabled={!ready || pageIndex <= 0}
-            className="border-r-[3px] border-black bg-orange px-4 py-3 font-display text-xs text-black disabled:opacity-35 sm:text-sm"
-          >
-            ← Prev
-          </button>
+          {!touchPrimary ? (
+            <button
+              type="button"
+              onClick={goPrev}
+              disabled={!ready || pageIndex <= 0}
+              className="border-r-[3px] border-black bg-orange px-4 py-3 font-display text-xs text-black disabled:opacity-35 sm:text-sm"
+            >
+              ← Prev
+            </button>
+          ) : null}
 
           {editingJump ? (
             <form
@@ -544,21 +764,23 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
                 setJumpDraft(String(pageIndex + 1));
                 setEditingJump(true);
               }}
-              className="min-w-[7.5rem] px-3 text-center font-mono-label text-[11px] font-bold text-black"
+              className="min-w-[7.5rem] px-3 py-3 text-center font-mono-label text-[11px] font-bold text-black"
               title="Jump to page"
             >
               {pageLabel}
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={goNext}
-            disabled={!ready || pageIndex >= doc.pageCount - 1}
-            className="border-l-[3px] border-black bg-lime px-4 py-3 font-display text-xs text-black disabled:opacity-35 sm:text-sm"
-          >
-            Next →
-          </button>
+          {!touchPrimary ? (
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={!ready || pageIndex >= doc.pageCount - 1}
+              className="border-l-[3px] border-black bg-lime px-4 py-3 font-display text-xs text-black disabled:opacity-35 sm:text-sm"
+            >
+              Next →
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

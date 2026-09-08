@@ -334,6 +334,9 @@ body {
   z-index: 50;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 .reader-stage {
@@ -342,6 +345,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.75rem;
   padding: 0.75rem;
   position: relative;
   background:
@@ -349,15 +353,86 @@ body {
     linear-gradient(90deg, #111 1px, transparent 1px),
     #000;
   background-size: 28px 28px;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 .reader-book-host {
+  position: relative;
   width: min(1100px, 100%);
   height: min(86vh, 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   will-change: transform;
+  touch-action: none;
+}
+
+.reader-book-host:not(.is-ready) {
+  pointer-events: none;
+}
+
+.reader-gesture-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.reader-gesture-layer:active {
+  cursor: grabbing;
+}
+
+.reader-tap-zone {
+  flex: 1;
+  height: 100%;
+  /* Transparent hit halves — visual only; gestures handled on the layer */
+  background: transparent;
+  pointer-events: none;
+}
+
+.reader-edge-nav {
+  flex-shrink: 0;
+  z-index: 8;
+  align-self: center;
+  border: 3px solid #000;
+  padding: 0.75rem 0.85rem;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  color: #000;
+  box-shadow: 4px 4px 0 #000;
+  white-space: nowrap;
+}
+
+.reader-edge-prev {
+  background: #ff6b35;
+}
+
+.reader-edge-next {
+  background: #c8f542;
+}
+
+.reader-edge-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.reader-shell.is-desktop .reader-stage {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .reader-shell.is-desktop .reader-edge-nav {
+    display: none;
+  }
 }
 
 .reader-book-host .stf__parent,
