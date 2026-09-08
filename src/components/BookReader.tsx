@@ -1,11 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FlipCorner, PageFlip, SizeType } from "page-flip";
+import { PageFlip } from "page-flip";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { loadPdfDocument, renderPdfPageToCanvas, type OpenedPdf } from "@/lib/pdf";
 import { getSavedPage, savePage } from "@/lib/session";
 import { playPageTurnSound, unlockPageSound } from "@/lib/sound";
+
+/** Runtime values match StPageFlip; enums are type-only in @types/page-flip. */
+const SIZE_STRETCH = "stretch" as const;
+const CORNER_BOTTOM = "bottom" as const;
 
 type BookReaderProps = {
   document: OpenedPdf;
@@ -138,7 +142,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         flip = new PageFlip(host, {
           width: pageWidth,
           height: pageHeight,
-          size: SizeType.STRETCH,
+          size: SIZE_STRETCH,
           minWidth: 280,
           maxWidth: 700,
           minHeight: 360,
@@ -154,7 +158,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           startPage,
           useMouseEvents: true,
           disableFlipByClick: false,
-        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any);
 
         flip.loadFromHTML(pageNodes as NodeListOf<HTMLElement>);
         flipRef.current = flip;
@@ -207,8 +212,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     };
   }, [doc.id, doc.data, doc.pageCount, isNarrow, layoutKey, ensurePagesRendered]);
 
-  const goPrev = () => flipRef.current?.flipPrev(FlipCorner.BOTTOM);
-  const goNext = () => flipRef.current?.flipNext(FlipCorner.BOTTOM);
+  const goPrev = () => flipRef.current?.flipPrev(CORNER_BOTTOM as never);
+  const goNext = () => flipRef.current?.flipNext(CORNER_BOTTOM as never);
 
   const toggleFullscreen = async () => {
     try {
