@@ -52,7 +52,7 @@ async function measure(page, reducedMotion) {
   await page.waitForFunction(
     () => !document.getElementById("bookly-boot-splash"),
     null,
-    { timeout: 5000 },
+    { timeout: 10000 },
   );
   const clearedMs = Date.now() - tNav;
 
@@ -74,12 +74,14 @@ async function main() {
   const summary = {
     normal,
     reduced,
-    // Hard caps: normal ≤ ~0.9s wall (includes network+hydrate+fade); reduced ≤ ~0.45s
+    // Intentional hold: normal ~3–4s (min 3s, max ~4.5s wall+fade); reduced ~1s
     pass:
       normal.splashPresent &&
       reduced.splashPresent &&
-      normal.clearedMs <= 900 &&
-      reduced.clearedMs <= 450,
+      normal.clearedMs >= 3000 &&
+      normal.clearedMs <= 4500 &&
+      reduced.clearedMs >= 800 &&
+      reduced.clearedMs <= 2000,
   };
 
   console.log(JSON.stringify(summary, null, 2));

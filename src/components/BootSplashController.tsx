@@ -2,18 +2,19 @@
 
 import { useEffect } from "react";
 
-/** Brief brand beat — dismiss ASAP once hydrated; hard-cap under ~0.6s. */
-const MIN_MS = 280;
-const MAX_MS = 520;
+/** Intentional brand beat so the mage+book animation can be enjoyed (~3–4s). */
+const MIN_MS = 3500;
+const MAX_MS = 4000;
 const FONT_BUDGET_MS = 80;
-/** prefers-reduced-motion: near-instant dismiss. */
-const REDUCED_MIN_MS = 0;
-const REDUCED_MAX_MS = 40;
+/** prefers-reduced-motion: short hold for accessibility (~1s). */
+const REDUCED_MIN_MS = 1000;
+const REDUCED_MAX_MS = 1200;
 
 /**
- * Hides the SSR boot splash once the app is hydrated.
+ * Hides the SSR boot splash once the app is hydrated, after a minimum hold.
  * Does not wait on window `load` or long `document.fonts` — those stall on
- * large assets (pdf worker) and slow first paint. Cap fonts at FONT_BUDGET_MS.
+ * large assets (pdf worker). Cap fonts at FONT_BUDGET_MS; only the initial
+ * app-open splash is held (PDF upload path is unaffected after dismiss).
  */
 export function BootSplashController() {
   useEffect(() => {
