@@ -801,8 +801,18 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       }
 
       if (gesture.folding) {
-        // Finger-follow release: complete or snap back
-        flip.userStop(pos, false);
+        // Portrait PageFlip puts the spine on the visible left edge, so
+        // stopMove only commits when the finger reaches x≈0. If the user
+        // dragged a meaningful distance, nudge past that threshold first.
+        const layerW = e.currentTarget.getBoundingClientRect().width;
+        const commit = Math.abs(dx) >= Math.min(100, layerW * 0.25);
+        if (commit) {
+          const edgeX = dx < 0 ? -12 : layerW + 12;
+          flip.userMove({ x: edgeX, y: pos.y }, true);
+          flip.userStop({ x: edgeX, y: pos.y }, false);
+        } else {
+          flip.userStop(pos, false);
+        }
         return;
       }
 
