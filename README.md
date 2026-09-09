@@ -32,7 +32,7 @@ Upload a PDF, open it as a book, turn pages, and read.
 ## How It Works
 
 ```text
-Upload PDF
+  Upload PDF
      ↓
 PDF.js renders the pages locally
      ↓
