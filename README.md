@@ -49,88 +49,6 @@ The goal is simple:
 
 ---
 
-## 📱 Mobile Experience
-
-Página is designed around natural touch interaction.
-
-### Finger Page Turning
-
-On mobile:
-
-* Swipe left → **Next page**
-* Swipe right → **Previous page**
-* Drag a page → **Page follows your finger**
-* Tap right side → **Next page**
-* Tap left side → **Previous page**
-
-The page should visually follow the user's finger during a drag rather than simply switching to the next page.
-
-If the user doesn't drag far enough, the page smoothly returns to its original position.
-
----
-
-## Desktop Experience
-
-On laptops and desktops, page navigation is primarily controlled using buttons.
-
-```text
-← Previous        8 / 42        Next →
-```
-
-Also support:
-
-* `←` → Previous page
-* `→` → Next page
-* `Space` → Next page
-* Mouse interaction where supported
-
-The book remains the main focus and controls stay minimal.
-
----
-
-
-## Page-Turn Sound
-
-Página includes an optional subtle paper sound.
-
-Sound is:
-
-* Off by default
-* Played only when a page is successfully turned
-* Toggleable from the reader controls
-* Designed to remain subtle and non-distracting
-
-Browser autoplay restrictions are respected.
-
----
-
-## Annotations
-
-Users can add simple annotations while reading:
-
-* Highlights
-* Sticky notes
-
-Annotations are stored locally in the browser and associated with the document.
-
-They do not need an account or cloud storage.
-
----
-
-## Local Resume
-
-Página can remember:
-
-* The last opened document
-* The last page
-* Local annotations
-
-This allows the user to return to a document without uploading it again.
-
-Data is stored locally using **IndexedDB**.
-
----
-
 ## Privacy
 
 Your PDF stays private.
@@ -149,16 +67,6 @@ Local data such as:
 can be stored in the browser's local storage/IndexedDB.
 
 Nothing needs to leave the user's device.
-
----
-
-## Download
-
-Users can download the original PDF directly to their device.
-
-If annotations are present, Página can also provide a notes sidecar containing the user's annotations.
-
-The original PDF itself is not modified.
 
 ---
 
@@ -184,29 +92,6 @@ No installation is required.
 
 ---
 
-## Android APK
-
-Página uses **Capacitor** to package the same web application as an Android app.
-
-### Requirements
-
-* JDK
-* Android SDK
-* Android Studio
-* Capacitor Android project
-
-The Android version should support:
-
-* PDF selection
-* Finger page turning
-* Page-turn sound
-* Fullscreen
-* Local reading
-* Android back button
-* Responsive book layout
-
----
-
 ## Tech Stack
 
 * **Next.js** — static export
@@ -219,40 +104,6 @@ The Android version should support:
 * **Web App Manifest** — PWA installation
 * **Service Worker** — offline-friendly application shell
 * **Capacitor** — Android packaging
-
----
-
-## Roadmap
-
-### MVP
-
-* [x] Landing page
-* [x] PDF upload
-* [x] Local PDF rendering
-* [x] Realistic page flipping
-* [x] Mobile swipe interaction
-* [x] Desktop navigation
-* [x] Page-turn sound
-* [x] Page counter
-* [x] Fullscreen
-* [x] Basic zoom
-* [x] Local resume
-* [x] Local annotations
-* [x] PWA installation
-* [x] Android APK support
-
-### Future
-
-Potential features:
-
-* Bookmarks
-* Reading progress
-* Reading themes
-* Custom page-turn sounds
-* Better offline support
-* Additional document formats
-
-New features should only be added when they improve the core reading experience.
 
 ---
 
