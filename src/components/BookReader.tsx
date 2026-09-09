@@ -116,7 +116,6 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const soundOnRef = useRef(false);
   const lastIndexRef = useRef(0);
   const ignoreSoundUntilRef = useRef(0);
-  const zoomRef = useRef(1);
   const readyRef = useRef(false);
   const gestureRef = useRef<{
     pointerId: number;
@@ -161,7 +160,6 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const persistTimerRef = useRef<number | null>(null);
 
   soundOnRef.current = soundOn;
-  zoomRef.current = zoom;
   readyRef.current = ready;
   annotsRef.current = { highlights, notes };
 
@@ -854,9 +852,9 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           void window.document.exitFullscreen();
         }
       } else if (e.key === "+" || e.key === "=") {
-        bumpZoom(0.1);
+        bumpZoom(ZOOM_STEP);
       } else if (e.key === "-" || e.key === "_") {
-        bumpZoom(-0.1);
+        bumpZoom(-ZOOM_STEP);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -897,9 +895,56 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   }, [onExit]);
 
   const pageLabel = `${pageIndex + 1} / ${doc.pageCount}`;
+  const zoomPercent = Math.round(zoom * 100);
+  const canZoomOut = zoom > ZOOM_MIN + 0.001;
+  const canZoomIn = zoom < ZOOM_MAX - 0.001;
+
+  const zoomControls = (
+    <div
+      className={`reader-zoom flex items-center border-[3px] border-black bg-white shadow-[3px_3px_0_#000] ${
+        touchPrimary ? "reader-zoom-touch" : ""
+      }`}
+      role="group"
+      aria-label="Book zoom"
+    >
+      <button
+        type="button"
+        onClick={() => bumpZoom(-ZOOM_STEP)}
+        disabled={!canZoomOut}
+        className="reader-zoom-btn border-r-[3px] border-black font-display text-black disabled:opacity-35"
+        aria-label="Zoom out"
+        title="Zoom out"
+      >
+        −
+      </button>
+      <button
+        type="button"
+        onClick={resetZoom}
+        className="reader-zoom-pct text-center font-mono-label font-bold text-black"
+        aria-label="Reset zoom to 100%"
+        title="Reset to 100%"
+      >
+        {zoomPercent}%
+      </button>
+      <button
+        type="button"
+        onClick={() => bumpZoom(ZOOM_STEP)}
+        disabled={!canZoomIn}
+        className="reader-zoom-btn border-l-[3px] border-black font-display text-black disabled:opacity-35"
+        aria-label="Zoom in"
+        title="Zoom in"
+      >
+        +
+      </button>
+    </div>
+  );
 
   return (
-    <div className={`reader-shell ${touchPrimary ? "is-touch" : "is-desktop"} ${annotateMode ? "is-annotate" : ""}`}>
+    <div
+      className={`reader-shell ${touchPrimary ? "is-touch" : "is-desktop"} ${annotateMode ? "is-annotate" : ""} ${
+        zoom !== 1 ? "is-zoomed" : ""
+      }`}
+    >
       <div
         className={`reader-controls reader-top-chrome absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 px-2 py-2.5 sm:gap-3 sm:px-4 sm:py-3 ${
           chromeVisible || annotateMode ? "visible-chrome" : "hidden-chrome"
@@ -943,29 +988,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           >
             {annotateMode ? "Done" : "Mark"}
           </button>
-          {!touchPrimary ? (
-            <div className="reader-zoom flex items-center border-[3px] border-black bg-white shadow-[3px_3px_0_#000]">
-              <button
-                type="button"
-                onClick={() => bumpZoom(-0.1)}
-                className="border-r-[3px] border-black px-2.5 py-2 font-display text-sm"
-                aria-label="Zoom out"
-              >
-                −
-              </button>
-              <span className="min-w-[3.5rem] px-2 text-center font-mono-label text-[10px] font-bold text-black">
-                {Math.round(zoom * 100)}%
-              </span>
-              <button
-                type="button"
-                onClick={() => bumpZoom(0.1)}
-                className="border-l-[3px] border-black px-2.5 py-2 font-display text-sm text-black"
-                aria-label="Zoom in"
-              >
-                +
-              </button>
-            </div>
-          ) : null}
+          {!touchPrimary ? zoomControls : null}
           <button
             type="button"
             onClick={toggleSound}
@@ -1127,9 +1150,12 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         }`}
       >
         {touchPrimary && !annotateMode ? (
-          <p className="reader-swipe-hint font-mono-label text-[9px] font-bold text-white/55">
-            Swipe to turn pages
-          </p>
+          <div className="reader-mobile-zoom-row flex flex-col items-center gap-1.5">
+            {zoomControls}
+            <p className="reader-swipe-hint font-mono-label text-[9px] font-bold text-white/55">
+              Swipe to turn · tap % to reset zoom
+            </p>
+          </div>
         ) : null}
         <div className="reader-pager flex items-center gap-0 border-[3px] border-black bg-cream shadow-[5px_5px_0_#c8f542]">
           {!touchPrimary && !annotateMode ? (

@@ -379,6 +379,73 @@ body {
   justify-content: center;
   will-change: transform;
   touch-action: none;
+  transform-origin: center center;
+  transition: transform 0.16s ease;
+}
+
+.reader-zoom {
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.reader-zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.35rem;
+  min-height: 2.35rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.reader-zoom-pct {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.6rem;
+  min-height: 2.35rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.68rem;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+}
+
+.reader-zoom-btn:hover:not(:disabled),
+.reader-zoom-pct:hover {
+  background: #c8f542;
+}
+
+.reader-zoom-btn:active:not(:disabled),
+.reader-zoom-pct:active {
+  background: #ff6b35;
+}
+
+.reader-zoom-touch .reader-zoom-btn {
+  min-width: 2.85rem;
+  min-height: 2.85rem;
+  font-size: 1.2rem;
+}
+
+.reader-zoom-touch .reader-zoom-pct {
+  min-width: 4rem;
+  min-height: 2.85rem;
+  font-size: 0.78rem;
+}
+
+.reader-mobile-zoom-row {
+  pointer-events: auto;
+}
+
+/* Keep zoomed pages centered; clip overflow so chrome stays usable */
+.reader-shell.is-zoomed .reader-stage {
+  overflow: hidden;
+}
+
+.reader-shell.is-zoomed .reader-touch-frame,
+.reader-shell.is-zoomed .reader-book-frame {
+  overflow: visible;
 }
 
 .reader-shell.is-touch .reader-book-host {
