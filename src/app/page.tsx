@@ -346,7 +346,7 @@ export default function HomePage() {
               Your PDF stays <span className="bg-pink px-1">private.</span>
             </h2>
             <p className="mt-5 text-base leading-relaxed text-white/75">
-              Bookly processes files locally in your browser. Nothing is uploaded to a server.
+              Página processes files locally in your browser. Nothing is uploaded to a server.
               Download saves the PDF to your device. This browser can also keep a local copy so you
               can continue reading later — still on your machine, never in the cloud.
             </p>
@@ -361,7 +361,7 @@ export default function HomePage() {
               <span className="bg-lime px-1 text-black">Or use in browser.</span>
             </h2>
             <p className="mt-4 max-w-xl text-base leading-relaxed text-white/80">
-              One tap installs Bookly as a fullscreen app when your browser supports it. Otherwise
+              One tap installs Página as a fullscreen app when your browser supports it. Otherwise
               you get clear Add-to-Home-Screen steps — or keep reading in the tab. Same private
               reader either way.
             </p>
@@ -379,7 +379,7 @@ export default function HomePage() {
                   onClick={() => void handleInstall()}
                   className="nb-btn nb-btn-lime mt-5 w-full text-sm sm:w-auto"
                 >
-                  Install Bookly
+                  Install Página
                 </button>
               </div>
 

@@ -9,10 +9,10 @@ export function SiteFooter() {
                 className="flex h-10 w-10 items-center justify-center border-[3px] border-black bg-lime text-lg font-black text-black shadow-[3px_3px_0_#000]"
                 aria-hidden
               >
-                B
+                P
               </span>
               <div>
-                <p className="font-display text-2xl leading-none text-black">Bookly</p>
+                <p className="font-display text-2xl leading-none text-black">Página</p>
                 <p className="mt-1 font-mono-label text-[10px] font-bold text-black/50">
                   PDF → Book · Local only
                 </p>
@@ -71,7 +71,7 @@ export function SiteFooter() {
 
         <div className="mt-10 flex flex-col gap-3 border-t-[3px] border-black pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="font-mono-label text-[10px] font-bold text-black/45">
-            © {new Date().getFullYear()} Bookly · All rights reserved
+            © {new Date().getFullYear()} Página · All rights reserved
           </p>
           <nav className="flex flex-wrap gap-x-4 gap-y-2 font-mono-label text-[10px] font-bold text-black/55">
             <a href="#how-it-works" className="hover:text-black hover:underline">

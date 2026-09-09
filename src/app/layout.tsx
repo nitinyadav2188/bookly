@@ -28,15 +28,15 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bookly — Turn your PDF into a book",
+  title: "Página — Turn your PDF into a book",
   description:
     "Upload a PDF and read it with the feeling of turning real pages. Private, local, and simple.",
-  applicationName: "Bookly",
+  applicationName: "Página",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Bookly",
+    title: "Página",
   },
   icons: {
     icon: [
@@ -121,7 +121,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <div className="boot-stage">
               <BootSplashMage />
             </div>
-            <p className="boot-name">Bookly</p>
+            <p className="boot-name">Página</p>
             <p className="boot-tag">PDF → Book</p>
           </div>
         </div>

@@ -1,6 +1,6 @@
-# Bookly
+# Página
 
-**Bookly** turns a PDF into a simple digital book — realistic page turns, optional paper sound, and a focused neo-brutal reading UI. Upload a file, open it as a book, turn pages, and read. No accounts, no cloud upload, no document platform baggage.
+**Página** turns a PDF into a simple digital book — realistic page turns, optional paper sound, and a focused neo-brutal reading UI. Upload a file, open it as a book, turn pages, and read. No accounts, no cloud upload, no document platform baggage.
 
 Built by **[NITIN YADAV](https://www.linkedin.com/in/nitin-yadav-681850299/)** · [GitHub](https://github.com/nitinyadav2188) · [X](https://x.com/nitindotdev)
 
@@ -32,11 +32,11 @@ For local iteration you can also run `npm run dev` (Next.js Turbopack). Prefer `
 
 ## Privacy
 
-Your PDF stays private. Bookly opens and renders files **locally in the browser**. Nothing is uploaded to a server. Use **Download** to save the PDF to your device. This browser can also keep a local IndexedDB copy (with annotations) so you can continue reading later — still on your machine, never in the cloud.
+Your PDF stays private. Página opens and renders files **locally in the browser**. Nothing is uploaded to a server. Use **Download** to save the PDF to your device. This browser can also keep a local IndexedDB copy (with annotations) so you can continue reading later — still on your machine, never in the cloud.
 
 ## Experience feedback
 
-Bookly may ask “How’s Bookly feeling?” after you’ve actually used it — not on first paint. Triggers: first successful page flip, about a minute in the reader, or ~50s into a return visit. **Not now** / submit snoozes the prompt for this session and about 10 days (`localStorage`).
+Página may ask “How’s Página feeling?” after you’ve actually used it — not on first paint. Triggers: first successful page flip, about a minute in the reader, or ~50s into a return visit. **Not now** / submit snoozes the prompt for this session and about 10 days (`localStorage`).
 
 Because this is a **static export** (no API routes), feedback is recorded as:
 
@@ -45,10 +45,10 @@ Because this is a **static export** (no API routes), feedback is recorded as:
 
 ## Install on phone
 
-Bookly is built for phones first. On the landing page:
+Página is built for phones first. On the landing page:
 
 1. Tap **Install on phone** (hero, header, sticky bar, or the Get the app section).
-2. Bookly tries, in order:
+2. Página tries, in order:
    - **PWA install** (`beforeinstallprompt`) when the browser supports it
    - **Android APK** download from `/downloads/bookly.apk` when that file is present
    - Clear **Add to Home Screen** steps (Safari / Chrome) otherwise
@@ -57,7 +57,7 @@ You can always **use in browser** with no install — same private local reader.
 
 ### Progressive Web App
 
-1. Open Bookly in a mobile browser (Chrome on Android, Safari on iOS).
+1. Open Página in a mobile browser (Chrome on Android, Safari on iOS).
 2. Tap **Install on phone**, or use the browser’s **Add to Home Screen / Install app** action.
 
 A service worker caches a light app shell for offline-friendly revisits. HTML and JS stay network-first so updates are not stuck behind a stale cache. The large PDF.js worker is cached on first use — not during service-worker install — so first-load activate stays fast.

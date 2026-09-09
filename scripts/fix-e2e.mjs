@@ -1,5 +1,5 @@
 /**
- * End-to-end Bookly reliability check:
+ * End-to-end Página reliability check:
  * splash → install (no hang) → upload → ink → desktop flip → mobile gestures
  */
 import { chromium, devices } from "playwright";
@@ -135,7 +135,7 @@ try {
     // Install must not hang — APK present ⇒ download; else modal fallback
     const downloadPromise = page.waitForEvent("download", { timeout: 5000 }).catch(() => null);
     const installStarted = Date.now();
-    await page.getByRole("button", { name: "Install Bookly" }).first().click();
+    await page.getByRole("button", { name: "Install Página" }).first().click();
     const download = await downloadPromise;
     const modal = await page.locator('[role="dialog"]').isVisible().catch(() => false);
     const installMs = Date.now() - installStarted;

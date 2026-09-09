@@ -14,9 +14,9 @@ export function Header({ onUpload, onInstall }: HeaderProps) {
             className="flex h-9 w-9 items-center justify-center border-[3px] border-black bg-lime text-lg font-black text-black shadow-[3px_3px_0_#000]"
             aria-hidden
           >
-            B
+            P
           </span>
-          <span className="font-display text-xl text-black sm:text-2xl">Bookly</span>
+          <span className="font-display text-xl text-black sm:text-2xl">Página</span>
         </a>
         <nav className="flex items-center gap-2 sm:gap-3">
           <a

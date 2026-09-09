@@ -33,7 +33,7 @@ export function MobileInstallBar({ onInstall }: MobileInstallBarProps) {
     <div
       className="mobile-install-bar fixed inset-x-0 bottom-0 z-40 border-t-[3px] border-black bg-lime px-3 py-3 shadow-[0_-4px_0_#000] sm:hidden"
       role="region"
-      aria-label="Install Bookly on your phone"
+      aria-label="Install Página on your phone"
     >
       <div className="mx-auto flex max-w-lg items-center gap-3">
         <div className="min-w-0 flex-1">

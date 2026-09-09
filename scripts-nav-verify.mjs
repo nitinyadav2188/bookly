@@ -1,5 +1,5 @@
 /**
- * Verify device-adaptive page navigation in Bookly reader.
+ * Verify device-adaptive page navigation in Página reader.
  * Desktop: Prev/Next buttons + keyboard. Mobile: swipe + tap zones.
  */
 import { chromium, devices } from "playwright";

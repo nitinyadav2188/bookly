@@ -12,7 +12,7 @@ export function BootSplashMage() {
       aria-hidden="true"
       role="img"
     >
-      <title>Bookly mage with a book</title>
+      <title>Página mage with a book</title>
 
       {/* Soft ground shadow */}
       <ellipse className="boot-ground" cx="100" cy="178" rx="48" ry="8" fill="#000" opacity="0.12" />

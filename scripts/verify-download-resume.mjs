@@ -1,5 +1,5 @@
 /**
- * Verify Download + IndexedDB Continue reading on a running Bookly server.
+ * Verify Download + IndexedDB Continue reading on a running Página server.
  * Usage: node scripts/verify-download-resume.mjs [baseUrl]
  */
 import { chromium } from "playwright";

@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "app.bookly.reader",
-  appName: "Bookly",
+  appName: "Página",
   webDir: "out",
   server: {
     androidScheme: "https",

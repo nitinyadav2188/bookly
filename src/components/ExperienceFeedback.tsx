@@ -190,12 +190,12 @@ export function ExperienceFeedback() {
         {thanks ? (
           <div className="py-6 text-center">
             <p className="font-display text-2xl text-black">Thanks — locked in.</p>
-            <p className="mt-2 text-sm text-ink-muted">Your vibe helps Bookly get better.</p>
+            <p className="mt-2 text-sm text-ink-muted">Your vibe helps Página get better.</p>
           </div>
         ) : (
           <>
             <h2 id={titleId} className="mt-1 font-display text-2xl leading-none text-black sm:text-[1.75rem]">
-              How&apos;s Bookly feeling?
+              How&apos;s Página feeling?
             </h2>
             <p className="mt-2 text-sm text-ink-muted">
               Quick check-in — rating + optional tea. No account, no spam.

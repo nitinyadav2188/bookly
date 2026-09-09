@@ -52,7 +52,7 @@ try {
 
   // Install: with APK present, should download immediately — no modal
   const downloadPromise = page.waitForEvent("download", { timeout: 8000 });
-  await page.getByRole("button", { name: "Install Bookly" }).first().click();
+  await page.getByRole("button", { name: "Install Página" }).first().click();
   let downloaded = false;
   let downloadName = null;
   try {
@@ -73,7 +73,7 @@ try {
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForTimeout(500);
   // Clear cached APK status by reloading the app (module state resets on full reload)
-  await page.getByRole("button", { name: "Install Bookly" }).first().click();
+  await page.getByRole("button", { name: "Install Página" }).first().click();
   await page.locator('[role="dialog"]').waitFor({ state: "visible", timeout: 8000 });
   await page.waitForTimeout(200);
   await page.screenshot({ path: path.join(OUT, "install-fallback-modal.png") });

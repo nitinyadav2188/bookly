@@ -1,4 +1,4 @@
-/* Bookly service worker — network-first shell; snappy install (no huge worker). */
+/* Página service worker — network-first shell; snappy install (no huge worker). */
 const CACHE = "bookly-shell-v7";
 const SHELL = [
   "./",

@@ -51,11 +51,11 @@ export function InstallModal({ open, onClose, fallbackOnly = false }: InstallMod
           <div>
             <p className="font-mono-label text-[10px] font-bold text-black/60">Get the app</p>
             <h2 id="install-title" className="mt-1 font-display text-2xl text-black">
-              {fallbackOnly ? "Add Bookly to home" : "Install on phone"}
+              {fallbackOnly ? "Add Página to home" : "Install on phone"}
             </h2>
             <p className="mt-2 text-sm text-ink-muted">
               {fallbackOnly
-                ? "Quick steps so Bookly opens like an app — or keep using the browser."
+                ? "Quick steps so Página opens like an app — or keep using the browser."
                 : "Install on phone for fullscreen reading, or stay in the browser."}
             </p>
           </div>
@@ -73,7 +73,7 @@ export function InstallModal({ open, onClose, fallbackOnly = false }: InstallMod
           <section className="border-[3px] border-black bg-white p-4 shadow-[4px_4px_0_#000]">
             <p className="font-mono-label text-[10px] font-bold text-black/60">Install on phone</p>
             {standalone ? (
-              <p className="mt-2 text-sm text-ink-muted">Bookly is already installed on this device.</p>
+              <p className="mt-2 text-sm text-ink-muted">Página is already installed on this device.</p>
             ) : (
               <>
                 {canPrompt ? (
@@ -83,7 +83,7 @@ export function InstallModal({ open, onClose, fallbackOnly = false }: InstallMod
                     onClick={async () => {
                       const outcome = await promptPwaInstall();
                       if (outcome === "accepted") {
-                        setStatus("Installed. Open Bookly from your home screen.");
+                        setStatus("Installed. Open Página from your home screen.");
                       } else if (outcome === "dismissed") {
                         setStatus("Install canceled.");
                       }
@@ -112,13 +112,13 @@ export function InstallModal({ open, onClose, fallbackOnly = false }: InstallMod
                           Tap <strong className="text-black">Install app</strong> or{" "}
                           <strong className="text-black">Add to Home screen</strong>
                         </li>
-                        <li>Confirm — Bookly appears on your home screen</li>
+                        <li>Confirm — Página appears on your home screen</li>
                       </>
                     ) : (
                       <>
                         <li>Look for the install icon in the address bar</li>
                         <li>
-                          Or open Bookly on your phone and tap{" "}
+                          Or open Página on your phone and tap{" "}
                           <strong className="text-black">Install on phone</strong>
                         </li>
                       </>

@@ -1,6 +1,6 @@
 {
-  "name": "Bookly",
-  "short_name": "Bookly",
+  "name": "Página",
+  "short_name": "Página",
   "description": "Turn your PDF into a book. Private, local reading with real page turns.",
   "id": "/",
   "start_url": "/",
