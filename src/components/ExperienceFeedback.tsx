@@ -26,7 +26,7 @@ const EMOJI_SCALE = [
 const READER_DWELL_MS = 60_000;
 /** On a return visit, wait on home before offering (ms). */
 const RETURN_VISIT_MS = 50_000;
-/** Never interrupt the boot splash / first paint (~3.5s hold + fade). */
+/** Never interrupt the boot splash / first paint (~2s hold + fade). */
 const POST_SPLASH_MS = 4000;
 
 function tryShowAllowed(): boolean {

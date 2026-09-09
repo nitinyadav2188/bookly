@@ -120,7 +120,7 @@ try {
 
     const t0 = Date.now();
     await page.goto("http://127.0.0.1:4321/", { waitUntil: "domcontentloaded", timeout: 60000 });
-    // Splash holds ~3.5s for the mage animation, then fades
+    // Splash holds ~2s for the mage animation, then fades
     await page.waitForFunction(
       () => !document.getElementById("bookly-boot-splash") || document.getElementById("bookly-boot-splash")?.classList.contains("is-done"),
       null,
@@ -128,7 +128,7 @@ try {
     );
     const splashMs = Date.now() - t0;
     await page.getByRole("button", { name: /Upload PDF/i }).first().waitFor({ state: "visible", timeout: 5000 });
-    results.splash = { dismissedMs: splashMs, ok: splashMs >= 3000 && splashMs <= 4500 };
+    results.splash = { dismissedMs: splashMs, ok: splashMs >= 1900 && splashMs <= 3000 };
     await page.screenshot({ path: path.join(OUT, "fix-landing.png"), fullPage: true });
     copy("fix-landing.png");
 

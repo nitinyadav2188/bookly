@@ -2,13 +2,13 @@
 
 import { useEffect } from "react";
 
-/** Intentional brand beat so the mage+book animation can be enjoyed (~3–4s). */
-const MIN_MS = 3500;
-const MAX_MS = 4000;
+/** Intentional brand beat so the mage+book animation can be enjoyed (~2s). */
+const MIN_MS = 2000;
+const MAX_MS = 2500;
 const FONT_BUDGET_MS = 80;
-/** prefers-reduced-motion: short hold for accessibility (~1s). */
-const REDUCED_MIN_MS = 1000;
-const REDUCED_MAX_MS = 1200;
+/** prefers-reduced-motion: short hold for accessibility (~800ms–1s). */
+const REDUCED_MIN_MS = 800;
+const REDUCED_MAX_MS = 1000;
 
 /**
  * Hides the SSR boot splash once the app is hydrated, after a minimum hold.

@@ -74,14 +74,14 @@ async function main() {
   const summary = {
     normal,
     reduced,
-    // Intentional hold: normal ~3–4s (min 3s, max ~4.5s wall+fade); reduced ~1s
+    // Intentional hold: normal ~2s (min 2s, max ~2.5s + fade); reduced ~800ms–1s
     pass:
       normal.splashPresent &&
       reduced.splashPresent &&
-      normal.clearedMs >= 3000 &&
-      normal.clearedMs <= 4500 &&
-      reduced.clearedMs >= 800 &&
-      reduced.clearedMs <= 2000,
+      normal.clearedMs >= 1900 &&
+      normal.clearedMs <= 3000 &&
+      reduced.clearedMs >= 700 &&
+      reduced.clearedMs <= 1500,
   };
 
   console.log(JSON.stringify(summary, null, 2));
