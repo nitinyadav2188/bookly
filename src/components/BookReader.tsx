@@ -26,7 +26,6 @@ import { playPageTurnSound, unlockPageSound } from "@/lib/sound";
 import { emitPageFlipSignal, emitReaderClose, emitReaderOpen } from "@/lib/feedback";
 
 const SIZE_STRETCH = "stretch" as const;
-const CORNER_BOTTOM = "bottom" as const;
 const SWIPE_DISTANCE = 45;
 const SWIPE_TIMEOUT_MS = 280;
 const DRAG_THRESHOLD = 8;
@@ -91,18 +90,18 @@ function clientToBookPos(flip: PageFlip, clientX: number, clientY: number): Gest
 }
 
 /**
- * StPageFlip's flipPrev() passes x:10, which fails disableFlipByClick corner checks
- * in portrait (bounds.left is negative). Pass a real left-edge corner instead.
+ * StPageFlip flip()/flipNext()/flipPrev() feed points through convertToBook
+ * (`x - left`, `y - top`). Stock flipNext uses `y = height - 2` without adding
+ * `top`, so when the page is vertically centered (typical mobile portrait) the
+ * point fails `disableFlipByClick` corner checks and taps/swipes no-op.
+ * Pass real bottom corners in that hybrid space (include `top` on y).
  */
 function animateFlip(flip: PageFlip, direction: "prev" | "next") {
-  if (direction === "next") {
-    flip.flipNext(CORNER_BOTTOM as never);
-    return;
-  }
   const rect = flip.getBoundsRect();
+  const y = rect.top + rect.height - 2;
   flip.getFlipController().flip({
-    x: rect.left + 10,
-    y: rect.height - 2,
+    x: direction === "next" ? rect.left + rect.width - 10 : rect.left + 10,
+    y,
   });
 }
 

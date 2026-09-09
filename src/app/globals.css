@@ -453,6 +453,18 @@ body {
   height: 100%;
 }
 
+/* Soften neo-brutal page shadow on phones — hard 8px offset reads as a
+   clipped lime L-bar and steals width from the page. */
+.reader-shell.is-touch .reader-book-host .stf__block {
+  box-shadow: 3px 3px 0 #c8f542;
+}
+
+.reader-shell.is-touch .reader-stage {
+  overflow: hidden;
+  /* Leave room for auto-hiding chrome without shrinking the touch frame to 0 */
+  padding: 0.35rem;
+}
+
 .reader-book-host:not(.is-ready) {
   pointer-events: none;
 }
@@ -744,6 +756,9 @@ body {
 .reader-shell.is-touch .reader-top-chrome {
   padding-top: max(0.65rem, env(safe-area-inset-top));
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.2) 70%, transparent 100%);
+  /* Keep actions on one row so EXIT doesn't wrap over the page */
+  flex-wrap: nowrap;
+  gap: 0.35rem;
 }
 
 .reader-shell.is-touch .reader-bottom-chrome {
@@ -751,10 +766,21 @@ body {
   background: linear-gradient(0deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.2) 70%, transparent 100%);
 }
 
+.reader-shell.is-touch .reader-actions {
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+}
+
+.reader-shell.is-touch .reader-title-chip {
+  max-width: min(38%, 9.5rem);
+  padding-left: 0.55rem;
+  padding-right: 0.55rem;
+}
+
 .reader-shell.is-touch .reader-chip {
-  min-height: 2.75rem;
-  padding: 0.55rem 0.75rem;
-  font-size: 0.7rem;
+  min-height: 2.55rem;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.65rem;
 }
 
 .reader-shell.is-touch .reader-pager {

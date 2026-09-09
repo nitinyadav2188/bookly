@@ -85,7 +85,14 @@ export function ExperienceFeedback() {
       }
     }, POST_SPLASH_MS);
 
-    const onFlip = () => offer("flip");
+    // Don't interrupt the first page turns — flip only arms the dwell timer.
+    // Immediate flip popups block reading on mobile.
+    const onFlip = () => {
+      if (dwellTimerRef.current != null) return;
+      dwellTimerRef.current = window.setTimeout(() => {
+        offer("flip");
+      }, READER_DWELL_MS);
+    };
     const onReaderOpen = () => {
       if (dwellTimerRef.current != null) window.clearTimeout(dwellTimerRef.current);
       dwellTimerRef.current = window.setTimeout(() => {
