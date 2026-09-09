@@ -35,23 +35,38 @@ Your PDF stays private. Bookly opens and renders files **locally in the browser*
 
 ## Install on phone
 
+Bookly is built for phones first. On the landing page:
+
+1. Tap **Install on phone** (hero, header, sticky bar, or the Get the app section).
+2. Bookly tries, in order:
+   - **PWA install** (`beforeinstallprompt`) when the browser supports it
+   - **Android APK** download from `/downloads/bookly.apk` when that file is present
+   - Clear **Add to Home Screen** steps (Safari / Chrome) otherwise
+
+You can always **use in browser** with no install — same private local reader.
+
 ### Progressive Web App
 
 1. Open Bookly in a mobile browser (Chrome on Android, Safari on iOS).
-2. Tap **Install Bookly**, or use the browser’s **Add to Home Screen / Install app** action.
+2. Tap **Install on phone**, or use the browser’s **Add to Home Screen / Install app** action.
 
 A service worker caches a light app shell for offline-friendly revisits. HTML and JS stay network-first so updates are not stuck behind a stale cache. The large PDF.js worker is cached on first use — not during service-worker install — so first-load activate stays fast.
 
+Manifest: `public/manifest.webmanifest` (`display: standalone`, cream theme, 192/512 icons + Apple touch icon).
+
 ### Android APK (Capacitor)
 
-Requires Android Studio / JDK / Android SDK on your machine.
+Requires **JDK**, **Android SDK**, and (for first-time setup) the Capacitor Android project.
 
 ```bash
-# First time
+# First time (creates android/ if needed)
 npm run android:init
 
-# Later builds — produces public/downloads/bookly.apk when Gradle succeeds
+# Later builds — copies the debug APK to public/downloads/bookly.apk
 npm run android:build
+
+# Then rebuild the static site so the APK is in the export
+npm run build
 ```
 
 Open the Android project anytime with:
@@ -60,7 +75,13 @@ Open the Android project anytime with:
 npm run android:open
 ```
 
-When `public/downloads/bookly.apk` exists, the Install dialog shows a **Download Android APK** button (hidden on iOS where APKs are not useful).
+When `public/downloads/bookly.apk` exists and is reachable, Install starts that download on Android (skipped on iOS). If the APK is missing, Install falls back to Add-to-Home-Screen steps and the modal notes how to build the APK.
+
+Point `android/local.properties` at your SDK, for example:
+
+```properties
+sdk.dir=/Users/you/Library/Android/sdk
+```
 
 ## Stack
 

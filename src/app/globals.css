@@ -621,6 +621,98 @@ body {
   transform: translateY(0);
 }
 
+.reader-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  border: 3px solid #000;
+  padding: 0.45rem 0.7rem;
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0 #000;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.reader-chip:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 #000;
+}
+
+.reader-chip:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+.reader-chip-white {
+  background: #fff;
+  color: #000;
+}
+
+.reader-chip-lime {
+  background: var(--lime);
+  color: #000;
+}
+
+.reader-chip-blue {
+  background: var(--blue);
+  color: #fff;
+}
+
+.reader-chip-pink {
+  background: var(--pink);
+  color: #fff;
+}
+
+.reader-chip-orange {
+  background: var(--orange);
+  color: #000;
+}
+
+.reader-shell.is-touch .reader-top-chrome {
+  padding-top: max(0.65rem, env(safe-area-inset-top));
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.2) 70%, transparent 100%);
+}
+
+.reader-shell.is-touch .reader-bottom-chrome {
+  padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.2) 70%, transparent 100%);
+}
+
+.reader-shell.is-touch .reader-chip {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.7rem;
+}
+
+.reader-shell.is-touch .reader-pager {
+  min-height: 3rem;
+}
+
+.reader-shell.is-desktop .reader-top-chrome {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, transparent 100%);
+}
+
+.reader-shell.is-desktop .reader-bottom-chrome {
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.45) 0%, transparent 100%);
+}
+
+.mobile-install-bar {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+/* Leave room for sticky install bar on phones */
+@media (max-width: 767px) {
+  body:has(.mobile-install-bar) .site-footer {
+    padding-bottom: 5.5rem;
+  }
+}
+
 .upload-backdrop {
   background: rgba(0, 0, 0, 0.72);
 }
@@ -820,7 +912,8 @@ body {
 .annotation-toolbar .annot-tool {
   border: 3px solid #000;
   background: #fff;
-  padding: 0.35rem 0.6rem;
+  padding: 0.45rem 0.7rem;
+  min-height: 2.4rem;
   font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
   font-size: 0.7rem;
   font-weight: 800;

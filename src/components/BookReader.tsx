@@ -875,12 +875,12 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   return (
     <div className={`reader-shell ${touchPrimary ? "is-touch" : "is-desktop"} ${annotateMode ? "is-annotate" : ""}`}>
       <div
-        className={`reader-controls absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 px-3 py-3 sm:px-4 ${
+        className={`reader-controls reader-top-chrome absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 px-2 py-2.5 sm:gap-3 sm:px-4 sm:py-3 ${
           chromeVisible || annotateMode ? "visible-chrome" : "hidden-chrome"
         }`}
       >
-        <div className="min-w-0 border-[3px] border-black bg-lime px-3 py-2 shadow-[4px_4px_0_#000]">
-          <p className="truncate font-display text-xs text-black sm:text-sm">{doc.name}</p>
+        <div className="reader-title-chip min-w-0 max-w-[42%] border-[3px] border-black bg-lime px-2.5 py-2 shadow-[4px_4px_0_#000] sm:max-w-none sm:px-3">
+          <p className="truncate font-display text-[11px] text-black sm:text-sm">{doc.name}</p>
           {resumeHint ? (
             <p className="font-mono-label text-[9px] text-black/70">
               Continue from page {resumeHint}
@@ -893,76 +893,77 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             <p className="font-mono-label text-[9px] text-black/70">{libraryHint}</p>
           ) : null}
           {markedFlash ? (
-            <p className="font-mono-label text-[9px] text-black/80">marked ✨</p>
+            <p className="font-mono-label text-[9px] text-black/80">marked</p>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="reader-actions flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={handleDownload}
-            className="border-[3px] border-black bg-orange px-3 py-2 font-display text-sm text-black shadow-[3px_3px_0_#000]"
+            className="reader-chip reader-chip-orange"
             aria-label="Download book"
             title="Download PDF to keep"
           >
-            Download
+            <span className="sm:hidden">DL</span>
+            <span className="hidden sm:inline">Download</span>
           </button>
           <button
             type="button"
             onClick={() => setAnnotateMode((v) => !v)}
-            className={`border-[3px] border-black px-3 py-2 font-display text-sm shadow-[3px_3px_0_#000] ${
-              annotateMode ? "bg-pink text-white" : "bg-white text-black"
-            }`}
+            className={`reader-chip ${annotateMode ? "reader-chip-pink" : "reader-chip-white"}`}
             aria-pressed={annotateMode}
             aria-label={annotateMode ? "Exit annotate mode" : "Enter annotate mode"}
             title={annotateMode ? "Done annotating" : "Annotate"}
           >
-            {annotateMode ? "Done" : "Annotate"}
+            {annotateMode ? "Done" : "Mark"}
           </button>
-          <div className="flex items-center border-[3px] border-black bg-white shadow-[3px_3px_0_#000]">
-            <button
-              type="button"
-              onClick={() => bumpZoom(-0.1)}
-              className="border-r-[3px] border-black px-2.5 py-2 font-display text-sm"
-              aria-label="Zoom out"
-            >
-              −
-            </button>
-            <span className="min-w-[3.5rem] px-2 text-center font-mono-label text-[10px] font-bold">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              type="button"
-              onClick={() => bumpZoom(0.1)}
-              className="border-l-[3px] border-black px-2.5 py-2 font-display text-sm"
-              aria-label="Zoom in"
-            >
-              +
-            </button>
-          </div>
+          {!touchPrimary ? (
+            <div className="reader-zoom flex items-center border-[3px] border-black bg-white shadow-[3px_3px_0_#000]">
+              <button
+                type="button"
+                onClick={() => bumpZoom(-0.1)}
+                className="border-r-[3px] border-black px-2.5 py-2 font-display text-sm"
+                aria-label="Zoom out"
+              >
+                −
+              </button>
+              <span className="min-w-[3.5rem] px-2 text-center font-mono-label text-[10px] font-bold text-black">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => bumpZoom(0.1)}
+                className="border-l-[3px] border-black px-2.5 py-2 font-display text-sm text-black"
+                aria-label="Zoom in"
+              >
+                +
+              </button>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={toggleSound}
-            className={`border-[3px] border-black px-3 py-2 font-display text-sm shadow-[3px_3px_0_#000] ${
-              soundOn ? "bg-lime text-black" : "bg-white text-black"
-            }`}
+            className={`reader-chip ${soundOn ? "reader-chip-lime" : "reader-chip-white"}`}
             aria-label={soundOn ? "Mute page sound" : "Enable page sound"}
             title={soundOn ? "Sound on" : "Sound off"}
           >
             {soundOn ? "SND" : "MUTE"}
           </button>
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="border-[3px] border-black bg-blue px-3 py-2 font-display text-sm text-white shadow-[3px_3px_0_#000]"
-            aria-label="Fullscreen"
-            title="Fullscreen"
-          >
-            FULL
-          </button>
+          {!touchPrimary ? (
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="reader-chip reader-chip-blue"
+              aria-label="Fullscreen"
+              title="Fullscreen"
+            >
+              FULL
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onExit}
-            className="border-[3px] border-black bg-pink px-3 py-2 font-display text-sm text-white shadow-[3px_3px_0_#000]"
+            className="reader-chip reader-chip-pink"
             aria-label="Exit reader"
             title="Exit"
           >
@@ -972,7 +973,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       </div>
 
       {annotateMode ? (
-        <div className="annotation-toolbar-wrap absolute inset-x-0 top-[4.5rem] z-20 flex justify-center px-3">
+        <div className="annotation-toolbar-wrap absolute inset-x-0 top-[4.25rem] z-20 flex justify-center px-2 sm:top-[4.5rem] sm:px-3">
           <AnnotationToolbar
             tool={annotTool}
             color={annotColor}
@@ -1095,11 +1096,16 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       </div>
 
       <div
-        className={`reader-controls absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2 px-4 py-4 ${
+        className={`reader-controls reader-bottom-chrome absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2 px-3 py-3 sm:px-4 sm:py-4 ${
           chromeVisible || annotateMode ? "visible-chrome" : "hidden-chrome"
         }`}
       >
-        <div className="flex items-center gap-0 border-[3px] border-black bg-white shadow-[5px_5px_0_#c8f542]">
+        {touchPrimary && !annotateMode ? (
+          <p className="reader-swipe-hint font-mono-label text-[9px] font-bold text-white/55">
+            Swipe to turn pages
+          </p>
+        ) : null}
+        <div className="reader-pager flex items-center gap-0 border-[3px] border-black bg-cream shadow-[5px_5px_0_#c8f542]">
           {!touchPrimary && !annotateMode ? (
             <button
               type="button"
@@ -1125,10 +1131,12 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
                 value={jumpDraft}
                 onChange={(e) => setJumpDraft(e.target.value.replace(/[^\d]/g, ""))}
                 onBlur={() => jumpToPage(jumpDraft)}
-                className="w-14 border-[2px] border-black bg-cream px-1 py-1 text-center font-mono-label text-[11px] font-bold text-black outline-none"
+                className="w-14 border-[2px] border-black bg-white px-1 py-1 text-center font-mono-label text-[11px] font-bold text-black outline-none"
                 aria-label="Jump to page"
               />
-              <span className="pl-1 font-mono-label text-[11px] font-bold">/ {doc.pageCount}</span>
+              <span className="pl-1 font-mono-label text-[11px] font-bold text-black">
+                / {doc.pageCount}
+              </span>
             </form>
           ) : (
             <button

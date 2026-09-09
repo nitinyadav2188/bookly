@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { HeroBook } from "@/components/HeroBook";
 import { UploadModal } from "@/components/UploadModal";
 import { InstallModal } from "@/components/InstallModal";
+import { MobileInstallBar } from "@/components/MobileInstallBar";
 import { PreparingBook } from "@/components/PreparingBook";
 import { BookReader } from "@/components/BookReader";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -236,9 +237,13 @@ export default function HomePage() {
                   onClick={() => void handleInstall()}
                   className="nb-btn nb-btn-blue text-sm"
                 >
-                  Install Bookly
+                  Install on phone
                 </button>
               </div>
+
+              <p className="mt-3 font-mono-label text-[10px] font-bold text-white/50">
+                Install on phone · or use in browser — same private reader
+              </p>
 
               <button
                 type="button"
@@ -348,28 +353,58 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="install" className="border-b-[3px] border-black py-16">
-          <div className="bookly-container flex flex-col items-start justify-between gap-6 border-[3px] border-black bg-white p-6 shadow-[8px_8px_0_#000] sm:flex-row sm:items-end sm:p-8">
-            <div>
-              <p className="font-mono-label text-[11px] font-bold text-black/50">Mobile</p>
-              <h2 className="mt-2 font-display text-3xl text-black">Take Bookly with you</h2>
-              <p className="mt-3 max-w-md text-ink-muted">
-                Install on your phone for a fullscreen reading app, or keep using it in the
-                browser.
-              </p>
+        <section id="install" className="border-b-[3px] border-black bg-blue py-12 text-white sm:py-16">
+          <div className="bookly-container">
+            <span className="nb-tag bg-lime text-black">Get the app</span>
+            <h2 className="mt-5 font-display text-[clamp(2rem,7vw,3.5rem)] leading-[0.95] text-white">
+              Install on phone.{" "}
+              <span className="bg-lime px-1 text-black">Or use in browser.</span>
+            </h2>
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-white/80">
+              One tap installs Bookly as a fullscreen app when your browser supports it. Otherwise
+              you get clear Add-to-Home-Screen steps — or keep reading in the tab. Same private
+              reader either way.
+            </p>
+
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              <div className="border-[3px] border-black bg-cream p-5 text-black shadow-[6px_6px_0_#000]">
+                <p className="font-mono-label text-[10px] font-bold text-black/55">Install on phone</p>
+                <h3 className="mt-2 font-display text-2xl leading-none">Home screen app</h3>
+                <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+                  Starts download or the system install prompt immediately. Falls back to short
+                  Add-to-Home-Screen steps on iOS and older browsers.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void handleInstall()}
+                  className="nb-btn nb-btn-lime mt-5 w-full text-sm sm:w-auto"
+                >
+                  Install Bookly
+                </button>
+              </div>
+
+              <div className="border-[3px] border-black bg-pink p-5 text-white shadow-[6px_6px_0_#000]">
+                <p className="font-mono-label text-[10px] font-bold text-white/70">Use in browser</p>
+                <h3 className="mt-2 font-display text-2xl leading-none">No install needed</h3>
+                <p className="mt-3 text-sm leading-relaxed text-white/85">
+                  Upload a PDF and start reading in this tab. Files stay on your device — nothing
+                  goes to a server.
+                </p>
+                <button
+                  type="button"
+                  onClick={openFilePicker}
+                  className="nb-btn nb-btn-white mt-5 w-full text-sm sm:w-auto"
+                >
+                  Open in browser
+                </button>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => void handleInstall()}
-              className="nb-btn nb-btn-blue text-sm"
-            >
-              Install Bookly
-            </button>
           </div>
         </section>
       </main>
 
       <SiteFooter />
+      <MobileInstallBar onInstall={() => void handleInstall()} />
 
       <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} onFile={handleFile} />
       <InstallModal

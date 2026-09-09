@@ -39,7 +39,7 @@ export function InstallModal({ open, onClose, fallbackOnly = false }: InstallMod
   if (!open) return null;
 
   return (
-    <div className="upload-backdrop fixed inset-0 z-40 flex items-end justify-center p-4 sm:items-center">
+    <div className="upload-backdrop fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
       <button type="button" aria-label="Close install" className="absolute inset-0" onClick={onClose} />
       <div
         role="dialog"
@@ -49,14 +49,14 @@ export function InstallModal({ open, onClose, fallbackOnly = false }: InstallMod
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <p className="font-mono-label text-[10px] font-bold text-black/60">Install</p>
+            <p className="font-mono-label text-[10px] font-bold text-black/60">Get the app</p>
             <h2 id="install-title" className="mt-1 font-display text-2xl text-black">
-              {fallbackOnly ? "Add Bookly to home" : "Install Bookly"}
+              {fallbackOnly ? "Add Bookly to home" : "Install on phone"}
             </h2>
             <p className="mt-2 text-sm text-ink-muted">
               {fallbackOnly
-                ? "Quick steps so Bookly opens like an app."
-                : "Same private reader. Fullscreen. Home screen ready."}
+                ? "Quick steps so Bookly opens like an app — or keep using the browser."
+                : "Install on phone for fullscreen reading, or stay in the browser."}
             </p>
           </div>
           <button
@@ -71,9 +71,7 @@ export function InstallModal({ open, onClose, fallbackOnly = false }: InstallMod
 
         <div className="space-y-4">
           <section className="border-[3px] border-black bg-white p-4 shadow-[4px_4px_0_#000]">
-            <p className="font-mono-label text-[10px] font-bold text-black/60">
-              {fallbackOnly ? "Add to Home Screen" : "Install on phone"}
-            </p>
+            <p className="font-mono-label text-[10px] font-bold text-black/60">Install on phone</p>
             {standalone ? (
               <p className="mt-2 text-sm text-ink-muted">Bookly is already installed on this device.</p>
             ) : (
@@ -120,7 +118,8 @@ export function InstallModal({ open, onClose, fallbackOnly = false }: InstallMod
                       <>
                         <li>Look for the install icon in the address bar</li>
                         <li>
-                          Or open Bookly on your phone and tap <strong className="text-black">Install</strong>
+                          Or open Bookly on your phone and tap{" "}
+                          <strong className="text-black">Install on phone</strong>
                         </li>
                       </>
                     )}
@@ -138,6 +137,12 @@ export function InstallModal({ open, onClose, fallbackOnly = false }: InstallMod
                   >
                     Download Android APK
                   </button>
+                ) : platform !== "ios" ? (
+                  <p className="mt-3 border-[2px] border-dashed border-black/30 bg-cream px-3 py-2 text-xs leading-relaxed text-ink-muted">
+                    No APK on this host yet. Use Add to Home Screen above, or build one with{" "}
+                    <code className="font-mono text-[11px] text-black">npm run android:build</code>{" "}
+                    (see README).
+                  </p>
                 ) : null}
               </>
             )}

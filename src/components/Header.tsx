@@ -28,9 +28,9 @@ export function Header({ onUpload, onInstall }: HeaderProps) {
           <button
             type="button"
             onClick={onInstall}
-            className="hidden font-mono-label text-[11px] font-semibold text-black hover:underline sm:inline"
+            className="nb-btn nb-btn-lime px-3 py-2 text-[11px] sm:px-4 sm:py-2.5 sm:text-xs"
           >
-            Install App
+            Install
           </button>
           <button type="button" onClick={onUpload} className="nb-btn nb-btn-blue text-xs sm:text-sm">
             Upload PDF
