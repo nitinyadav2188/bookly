@@ -1,123 +1,556 @@
-# Página
+# Página 📖
 
-**Página** turns a PDF into a simple digital book — realistic page turns, optional paper sound, and a focused neo-brutal reading UI. Upload a file, open it as a book, turn pages, and read. No accounts, no cloud upload, no document platform baggage.
+**Página** turns a PDF into a simple digital book — realistic page turns, optional paper sound, and a focused neo-brutal reading experience.
 
-Built by **[NITIN YADAV](https://www.linkedin.com/in/nitin-yadav-681850299/)** · [GitHub](https://github.com/nitinyadav2188) · [X](https://x.com/nitindotdev)
+Upload a PDF, open it as a book, turn pages, and read.
 
-## Features
+**No accounts. No cloud uploads. No unnecessary document-platform features.**
 
-- **Landing → Upload → Reader** — three screens, nothing else
-- **Realistic page flips** via [StPageFlip](https://github.com/Nodlik/StPageFlip)
-- **Local PDF rendering** with PDF.js (files never leave the browser)
-- **In-reader annotations** — highlights and sticky notes, saved per document in the browser
-- **Download** — keep the original PDF on your device (plus a notes sidecar when you have annotations)
-- **Local resume** — the last book is kept in IndexedDB so you can continue reading without re-uploading
-- **Page-turn sound** (off until you enable it)
-- **Page memory** of the last page for the same file
-- **PWA install** for mobile home-screen use
-- **Capacitor Android** packaging from the same static export
-- **Experience feedback** — optional neo-brutal popup after meaningful use (first page flip, ~60s in reader, or a return visit). Rating + optional comment; dismissible with a ~10-day snooze
+Built by **NITIN YADAV** · [LinkedIn](https://www.linkedin.com/in/nitin-yadav-681850299/) · [GitHub](https://github.com/nitinyadav2188) · [X](https://x.com/nitindotdev)
 
-## Quick start
+---
 
-```bash
-npm install
-npm run build
-npm start
+## ✨ Features
+
+* **Landing → Upload → Reader** — three simple screens
+* **Realistic page flips** powered by [StPageFlip](https://github.com/Nodlik/StPageFlip)
+* **Local PDF rendering** with PDF.js
+* **Private by design** — PDFs stay on the user's device
+* **Mobile-first page turning** — swipe or drag with your finger
+* **Desktop navigation** — Previous / Next buttons and keyboard controls
+* **Page-turn sound** — optional and disabled by default
+* **In-reader annotations** — highlights and sticky notes
+* **Local resume** — continue reading without re-uploading
+* **Page memory** — remembers the last page for a document
+* **Fullscreen reading**
+* **Basic zoom**
+* **PDF download**
+* **PWA installation** for phones
+* **Android APK** support through Capacitor
+* **Experience feedback** after meaningful usage
+
+---
+
+## 🎯 How It Works
+
+```text
+Upload PDF
+     ↓
+PDF.js renders the pages locally
+     ↓
+Página creates the digital book
+     ↓
+Turn the pages
+     ↓
+Read
 ```
 
-Open [http://127.0.0.1:4321](http://127.0.0.1:4321).
+The goal is simple:
 
-For local iteration you can also run `npm run dev` (Next.js Turbopack). Prefer `npm run build && npm start` when testing the flipbook — it serves the static export Capacitor uses.
+> **Make a PDF feel like a real book.**
 
-## Privacy
+---
 
-Your PDF stays private. Página opens and renders files **locally in the browser**. Nothing is uploaded to a server. Use **Download** to save the PDF to your device. This browser can also keep a local IndexedDB copy (with annotations) so you can continue reading later — still on your machine, never in the cloud.
+## 📱 Mobile Experience
 
-## Experience feedback
+Página is designed around natural touch interaction.
 
-Página may ask “How’s Página feeling?” after you’ve actually used it — not on first paint. Triggers: first successful page flip, about a minute in the reader, or ~50s into a return visit. **Not now** / submit snoozes the prompt for this session and about 10 days (`localStorage`).
+### Finger Page Turning
 
-Because this is a **static export** (no API routes), feedback is recorded as:
+On mobile:
 
-1. **Vercel Analytics** custom events — `experience_feedback` (with `rating`, `hasComment`, `trigger`) and `experience_feedback_dismiss`. Enable Web Analytics on the Vercel project; custom events appear in the Analytics dashboard.
-2. **Local log** — each submission is stored in IndexedDB (`bookly-feedback`) and mirrored in `localStorage` (`bookly-feedback-log`) so nothing is lost offline. Comments never leave the device unless you later add a backend.
+* Swipe left → **Next page**
+* Swipe right → **Previous page**
+* Drag a page → **Page follows your finger**
+* Tap right side → **Next page**
+* Tap left side → **Previous page**
 
-## Install on phone
+The page should visually follow the user's finger during a drag rather than simply switching to the next page.
 
-Página is built for phones first. On the landing page:
+If the user doesn't drag far enough, the page smoothly returns to its original position.
 
-1. Tap **Install on phone** (hero, header, sticky bar, or the Get the app section).
-2. Página tries, in order:
-   - **PWA install** (`beforeinstallprompt`) when the browser supports it
-   - **Android APK** download from `/downloads/bookly.apk` when that file is present
-   - Clear **Add to Home Screen** steps (Safari / Chrome) otherwise
+---
 
-You can always **use in browser** with no install — same private local reader.
+## 💻 Desktop Experience
 
-### Progressive Web App
+On laptops and desktops, page navigation is primarily controlled using buttons.
 
-1. Open Página in a mobile browser (Chrome on Android, Safari on iOS).
-2. Tap **Install on phone**, or use the browser’s **Add to Home Screen / Install app** action.
+```text
+← Previous        8 / 42        Next →
+```
 
-A service worker caches a light app shell for offline-friendly revisits. HTML and JS stay network-first so updates are not stuck behind a stale cache. The large PDF.js worker is cached on first use — not during service-worker install — so first-load activate stays fast.
+Also support:
 
-Manifest: `public/manifest.webmanifest` (`display: standalone`, cream theme, 192/512 icons + Apple touch icon).
+* `←` → Previous page
+* `→` → Next page
+* `Space` → Next page
+* Mouse interaction where supported
 
-### Android APK (Capacitor)
+The book remains the main focus and controls stay minimal.
 
-Requires **JDK**, **Android SDK**, and (for first-time setup) the Capacitor Android project.
+---
+
+## 📖 Realistic Page Flip
+
+Página uses [StPageFlip](https://github.com/Nodlik/StPageFlip) to create a physical page-turning effect.
+
+A page should:
+
+1. Lift from the edge
+2. Follow the user's interaction
+3. Curl toward the opposite side
+4. Reveal the next page
+5. Cast a subtle shadow
+6. Settle naturally
+
+Avoid simple slide or fade transitions.
+
+The experience should feel closer to turning paper than changing screens.
+
+---
+
+## 🔊 Page-Turn Sound
+
+Página includes an optional subtle paper sound.
+
+Sound is:
+
+* Off by default
+* Played only when a page is successfully turned
+* Toggleable from the reader controls
+* Designed to remain subtle and non-distracting
+
+Browser autoplay restrictions are respected.
+
+---
+
+## 📝 Annotations
+
+Users can add simple annotations while reading:
+
+* Highlights
+* Sticky notes
+
+Annotations are stored locally in the browser and associated with the document.
+
+They do not need an account or cloud storage.
+
+---
+
+## 💾 Local Resume
+
+Página can remember:
+
+* The last opened document
+* The last page
+* Local annotations
+
+This allows the user to return to a document without uploading it again.
+
+Data is stored locally using **IndexedDB**.
+
+---
+
+## 🔒 Privacy
+
+Your PDF stays private.
+
+Página renders PDFs **locally in the browser**.
+
+Files are not uploaded to a cloud server as part of the core reading experience.
+
+Local data such as:
+
+* PDFs
+* Reading position
+* Annotations
+* Feedback
+
+can be stored in the browser's local storage/IndexedDB.
+
+Nothing needs to leave the user's device.
+
+---
+
+## 📥 Download
+
+Users can download the original PDF directly to their device.
+
+If annotations are present, Página can also provide a notes sidecar containing the user's annotations.
+
+The original PDF itself is not modified.
+
+---
+
+## 📱 Install on Phone
+
+Página is built to work well on mobile devices.
+
+The landing page includes:
+
+**Install on phone**
+
+Depending on the device and browser, Página can:
+
+1. Trigger the PWA installation prompt
+2. Provide an Android APK when available
+3. Show Add to Home Screen instructions
+
+Users can also simply choose:
+
+**Use in browser**
+
+No installation is required.
+
+---
+
+## 🌐 Progressive Web App
+
+Página supports PWA installation.
+
+### Android
+
+Open Página in Chrome and use:
+
+**Install on phone**
+
+or:
+
+**Install app / Add to Home Screen**
+
+### iOS
+
+Open Página in Safari and use:
+
+**Share → Add to Home Screen**
+
+The PWA includes:
+
+* Web App Manifest
+* Service Worker
+* Standalone display mode
+* App icons
+* Offline-friendly application shell
+
+Manifest:
+
+```text
+public/manifest.webmanifest
+```
+
+The service worker uses a network-first strategy for HTML and JavaScript so new releases are not blocked by stale cached assets.
+
+---
+
+## 🤖 Android APK
+
+Página uses **Capacitor** to package the same web application as an Android app.
+
+### Requirements
+
+* JDK
+* Android SDK
+* Android Studio
+* Capacitor Android project
+
+### First-time setup
 
 ```bash
-# First time (creates android/ if needed)
 npm run android:init
+```
 
-# Later builds — copies the debug APK to public/downloads/bookly.apk
+### Build APK
+
+```bash
 npm run android:build
+```
 
-# Then rebuild the static site so the APK is in the export
+The debug APK can be copied to:
+
+```text
+public/downloads/pagina.apk
+```
+
+> **Note:** This repo’s Capacitor build script currently still copies the debug APK to `public/downloads/bookly.apk`. Prefer `pagina.apk` going forward; update the script / install path when renaming the download.
+
+Then rebuild the static site:
+
+```bash
 npm run build
 ```
 
-Open the Android project anytime with:
+### Open Android project
 
 ```bash
 npm run android:open
 ```
 
-When `public/downloads/bookly.apk` exists and is reachable, Install starts that download on Android (skipped on iOS). If the APK is missing, Install falls back to Add-to-Home-Screen steps and the modal notes how to build the APK.
+Configure the Android SDK in:
 
-Point `android/local.properties` at your SDK, for example:
+```text
+android/local.properties
+```
+
+Example:
 
 ```properties
 sdk.dir=/Users/you/Library/Android/sdk
 ```
 
-## Stack
+The Android version should support:
 
-- **Next.js** (static export) + **React** + **TypeScript** + **Tailwind CSS**
-- **PDF.js** for rendering
-- **StPageFlip** (`page-flip`) for page curls
-- Web App Manifest + service worker for PWA
-- **Capacitor** for the Android wrapper
+* PDF selection
+* Finger page turning
+* Page-turn sound
+* Fullscreen
+* Local reading
+* Android back button
+* Responsive book layout
 
-## Scripts
+---
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Dev server on port 4321 |
-| `npm run build` | Static export to `out/` |
-| `npm start` | Serve the export on port 4321 |
-| `npm run lint` | ESLint |
-| `npm run android:sync` | Build web assets and sync Capacitor |
-| `npm run android:build` | Sync + assemble debug APK |
-| `npm run android:open` | Open the Android project in Android Studio |
-| `npm run android:init` | First-time Capacitor Android setup |
+## 🚀 Quick Start
 
-## Author
+Clone the repository:
+
+```bash
+git clone <repository-url>
+cd pagina
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the development server:
+
+```bash
+npm run dev
+```
+
+For production testing:
+
+```bash
+npm run build
+npm start
+```
+
+Open:
+
+```text
+http://127.0.0.1:4321
+```
+
+When testing the flipbook, prefer:
+
+```bash
+npm run build && npm start
+```
+
+This matches the static export used by the Capacitor Android build.
+
+---
+
+## 🛠️ Tech Stack
+
+* **Next.js** — static export
+* **React**
+* **TypeScript**
+* **Tailwind CSS**
+* **PDF.js** — local PDF rendering
+* **StPageFlip** — realistic page turning
+* **IndexedDB** — local document and annotation storage
+* **Web App Manifest** — PWA installation
+* **Service Worker** — offline-friendly application shell
+* **Capacitor** — Android packaging
+
+---
+
+## 📂 Project Structure
+
+```text
+pagina/
+├── src/
+│   ├── components/
+│   │   ├── Upload/
+│   │   ├── Reader/
+│   │   ├── PageFlip/
+│   │   ├── Annotations/
+│   │   └── Controls/
+│   │
+│   ├── services/
+│   │   ├── pdf/
+│   │   └── storage/
+│   │
+│   ├── assets/
+│   │   └── sounds/
+│   │
+│   ├── App.tsx
+│   └── ...
+│
+├── public/
+│   ├── downloads/
+│   ├── icons/
+│   └── manifest.webmanifest
+│
+├── android/
+├── capacitor.config.*
+├── package.json
+└── README.md
+```
+
+---
+
+## 📜 Scripts
+
+| Command                 | Purpose                                |
+| ----------------------- | -------------------------------------- |
+| `npm run dev`           | Start development server on port 4321  |
+| `npm run build`         | Build static export to `out/`          |
+| `npm start`             | Serve production export on port 4321   |
+| `npm run lint`          | Run ESLint                             |
+| `npm run android:sync`  | Build web assets and sync Capacitor    |
+| `npm run android:build` | Sync and build debug APK               |
+| `npm run android:open`  | Open Android project in Android Studio |
+| `npm run android:init`  | First-time Capacitor Android setup     |
+
+---
+
+## 💬 Experience Feedback
+
+Página may occasionally ask:
+
+> **How's Página feeling?**
+
+The feedback prompt should appear only after meaningful use, such as:
+
+* First successful page flip
+* Approximately 60 seconds in the reader
+* Return visit
+
+Users can:
+
+* Submit a rating
+* Add an optional comment
+* Dismiss the prompt
+
+The prompt should never interrupt the initial upload or first reading experience.
+
+Because Página is a static application with no API routes, feedback can be stored locally.
+
+If Vercel Analytics is enabled, custom events can be recorded:
+
+```text
+experience_feedback
+experience_feedback_dismiss
+```
+
+Comments remain on the user's device unless a backend is intentionally added later.
+
+---
+
+## 🎨 Product Principles
+
+### Simple
+
+Página should do one thing exceptionally well.
+
+### Private
+
+Documents should remain on the user's device.
+
+### Natural
+
+Pages should behave like pages.
+
+### Fast
+
+The reader should remain responsive, including with larger PDFs.
+
+### Mobile-first
+
+Finger interaction is the primary mobile experience.
+
+### Focused
+
+The book should remain the center of attention.
+
+---
+
+## 🗺️ Roadmap
+
+### MVP
+
+* [x] Landing page
+* [x] PDF upload
+* [x] Local PDF rendering
+* [x] Realistic page flipping
+* [x] Mobile swipe interaction
+* [x] Desktop navigation
+* [x] Page-turn sound
+* [x] Page counter
+* [x] Fullscreen
+* [x] Basic zoom
+* [x] Local resume
+* [x] Local annotations
+* [x] PWA installation
+* [x] Android APK support
+
+### Future
+
+Potential features:
+
+* Bookmarks
+* Reading progress
+* Reading themes
+* Custom page-turn sounds
+* Better offline support
+* Additional document formats
+
+New features should only be added when they improve the core reading experience.
+
+---
+
+## 📄 Supported Format
+
+Currently supported:
+
+**PDF**
+
+Other formats may be considered in the future.
+
+---
+
+## 💡 Philosophy
+
+Página isn't trying to become another complicated document platform.
+
+It focuses on one simple idea:
+
+> **Your PDF should feel like a book.**
+
+Upload it.
+
+Open it.
+
+Turn the page.
+
+Read.
+
+---
+
+## 👨‍💻 Author
 
 **NITIN YADAV**
 
-- LinkedIn: [nitin-yadav-681850299](https://www.linkedin.com/in/nitin-yadav-681850299/)
-- GitHub: [nitinyadav2188](https://github.com/nitinyadav2188)
-- X: [@nitindotdev](https://x.com/nitindotdev)
+* LinkedIn: [nitin-yadav-681850299](https://www.linkedin.com/in/nitin-yadav-681850299/)
+* GitHub: [nitinyadav2188](https://github.com/nitinyadav2188)
+* X: [@nitindotdev](https://x.com/nitindotdev)
+
+---
+
+## 📜 License
+
+Add the project's chosen license here.
