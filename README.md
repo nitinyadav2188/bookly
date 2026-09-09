@@ -1,4 +1,4 @@
-# Página 📖
+# Página 
 
 **Página** turns a PDF into a simple digital book — realistic page turns, optional paper sound, and a focused neo-brutal reading experience.
 
@@ -6,14 +6,12 @@ Upload a PDF, open it as a book, turn pages, and read.
 
 **No accounts. No cloud uploads. No unnecessary document-platform features.**
 
-Built by **NITIN YADAV** · [LinkedIn](https://www.linkedin.com/in/nitin-yadav-681850299/) · [GitHub](https://github.com/nitinyadav2188) · [X](https://x.com/nitindotdev)
-
 ---
 
-## ✨ Features
+## Features
 
 * **Landing → Upload → Reader** — three simple screens
-* **Realistic page flips** powered by [StPageFlip](https://github.com/Nodlik/StPageFlip)
+* **Realistic page flips**
 * **Local PDF rendering** with PDF.js
 * **Private by design** — PDFs stay on the user's device
 * **Mobile-first page turning** — swipe or drag with your finger
@@ -31,7 +29,7 @@ Built by **NITIN YADAV** · [LinkedIn](https://www.linkedin.com/in/nitin-yadav-6
 
 ---
 
-## 🎯 How It Works
+## How It Works
 
 ```text
 Upload PDF
@@ -42,7 +40,7 @@ Página creates the digital book
      ↓
 Turn the pages
      ↓
-Read
+     Read
 ```
 
 The goal is simple:
@@ -71,7 +69,7 @@ If the user doesn't drag far enough, the page smoothly returns to its original p
 
 ---
 
-## 💻 Desktop Experience
+## Desktop Experience
 
 On laptops and desktops, page navigation is primarily controlled using buttons.
 
@@ -90,26 +88,8 @@ The book remains the main focus and controls stay minimal.
 
 ---
 
-## 📖 Realistic Page Flip
 
-Página uses [StPageFlip](https://github.com/Nodlik/StPageFlip) to create a physical page-turning effect.
-
-A page should:
-
-1. Lift from the edge
-2. Follow the user's interaction
-3. Curl toward the opposite side
-4. Reveal the next page
-5. Cast a subtle shadow
-6. Settle naturally
-
-Avoid simple slide or fade transitions.
-
-The experience should feel closer to turning paper than changing screens.
-
----
-
-## 🔊 Page-Turn Sound
+## Page-Turn Sound
 
 Página includes an optional subtle paper sound.
 
@@ -124,7 +104,7 @@ Browser autoplay restrictions are respected.
 
 ---
 
-## 📝 Annotations
+## Annotations
 
 Users can add simple annotations while reading:
 
@@ -137,7 +117,7 @@ They do not need an account or cloud storage.
 
 ---
 
-## 💾 Local Resume
+## Local Resume
 
 Página can remember:
 
@@ -151,7 +131,7 @@ Data is stored locally using **IndexedDB**.
 
 ---
 
-## 🔒 Privacy
+## Privacy
 
 Your PDF stays private.
 
@@ -172,7 +152,7 @@ Nothing needs to leave the user's device.
 
 ---
 
-## 📥 Download
+## Download
 
 Users can download the original PDF directly to their device.
 
@@ -182,7 +162,7 @@ The original PDF itself is not modified.
 
 ---
 
-## 📱 Install on Phone
+## Install on Phone
 
 Página is built to work well on mobile devices.
 
@@ -204,45 +184,7 @@ No installation is required.
 
 ---
 
-## 🌐 Progressive Web App
-
-Página supports PWA installation.
-
-### Android
-
-Open Página in Chrome and use:
-
-**Install on phone**
-
-or:
-
-**Install app / Add to Home Screen**
-
-### iOS
-
-Open Página in Safari and use:
-
-**Share → Add to Home Screen**
-
-The PWA includes:
-
-* Web App Manifest
-* Service Worker
-* Standalone display mode
-* App icons
-* Offline-friendly application shell
-
-Manifest:
-
-```text
-public/manifest.webmanifest
-```
-
-The service worker uses a network-first strategy for HTML and JavaScript so new releases are not blocked by stale cached assets.
-
----
-
-## 🤖 Android APK
+## Android APK
 
 Página uses **Capacitor** to package the same web application as an Android app.
 
@@ -252,50 +194,6 @@ Página uses **Capacitor** to package the same web application as an Android app
 * Android SDK
 * Android Studio
 * Capacitor Android project
-
-### First-time setup
-
-```bash
-npm run android:init
-```
-
-### Build APK
-
-```bash
-npm run android:build
-```
-
-The debug APK can be copied to:
-
-```text
-public/downloads/pagina.apk
-```
-
-> **Note:** This repo’s Capacitor build script currently still copies the debug APK to `public/downloads/bookly.apk`. Prefer `pagina.apk` going forward; update the script / install path when renaming the download.
-
-Then rebuild the static site:
-
-```bash
-npm run build
-```
-
-### Open Android project
-
-```bash
-npm run android:open
-```
-
-Configure the Android SDK in:
-
-```text
-android/local.properties
-```
-
-Example:
-
-```properties
-sdk.dir=/Users/you/Library/Android/sdk
-```
 
 The Android version should support:
 
@@ -309,51 +207,7 @@ The Android version should support:
 
 ---
 
-## 🚀 Quick Start
-
-Clone the repository:
-
-```bash
-git clone <repository-url>
-cd pagina
-```
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Run the development server:
-
-```bash
-npm run dev
-```
-
-For production testing:
-
-```bash
-npm run build
-npm start
-```
-
-Open:
-
-```text
-http://127.0.0.1:4321
-```
-
-When testing the flipbook, prefer:
-
-```bash
-npm run build && npm start
-```
-
-This matches the static export used by the Capacitor Android build.
-
----
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 * **Next.js** — static export
 * **React**
@@ -368,118 +222,7 @@ This matches the static export used by the Capacitor Android build.
 
 ---
 
-## 📂 Project Structure
-
-```text
-pagina/
-├── src/
-│   ├── components/
-│   │   ├── Upload/
-│   │   ├── Reader/
-│   │   ├── PageFlip/
-│   │   ├── Annotations/
-│   │   └── Controls/
-│   │
-│   ├── services/
-│   │   ├── pdf/
-│   │   └── storage/
-│   │
-│   ├── assets/
-│   │   └── sounds/
-│   │
-│   ├── App.tsx
-│   └── ...
-│
-├── public/
-│   ├── downloads/
-│   ├── icons/
-│   └── manifest.webmanifest
-│
-├── android/
-├── capacitor.config.*
-├── package.json
-└── README.md
-```
-
----
-
-## 📜 Scripts
-
-| Command                 | Purpose                                |
-| ----------------------- | -------------------------------------- |
-| `npm run dev`           | Start development server on port 4321  |
-| `npm run build`         | Build static export to `out/`          |
-| `npm start`             | Serve production export on port 4321   |
-| `npm run lint`          | Run ESLint                             |
-| `npm run android:sync`  | Build web assets and sync Capacitor    |
-| `npm run android:build` | Sync and build debug APK               |
-| `npm run android:open`  | Open Android project in Android Studio |
-| `npm run android:init`  | First-time Capacitor Android setup     |
-
----
-
-## 💬 Experience Feedback
-
-Página may occasionally ask:
-
-> **How's Página feeling?**
-
-The feedback prompt should appear only after meaningful use, such as:
-
-* First successful page flip
-* Approximately 60 seconds in the reader
-* Return visit
-
-Users can:
-
-* Submit a rating
-* Add an optional comment
-* Dismiss the prompt
-
-The prompt should never interrupt the initial upload or first reading experience.
-
-Because Página is a static application with no API routes, feedback can be stored locally.
-
-If Vercel Analytics is enabled, custom events can be recorded:
-
-```text
-experience_feedback
-experience_feedback_dismiss
-```
-
-Comments remain on the user's device unless a backend is intentionally added later.
-
----
-
-## 🎨 Product Principles
-
-### Simple
-
-Página should do one thing exceptionally well.
-
-### Private
-
-Documents should remain on the user's device.
-
-### Natural
-
-Pages should behave like pages.
-
-### Fast
-
-The reader should remain responsive, including with larger PDFs.
-
-### Mobile-first
-
-Finger interaction is the primary mobile experience.
-
-### Focused
-
-The book should remain the center of attention.
-
----
-
-## 🗺️ Roadmap
+## Roadmap
 
 ### MVP
 
@@ -513,44 +256,16 @@ New features should only be added when they improve the core reading experience.
 
 ---
 
-## 📄 Supported Format
+## Author
 
-Currently supported:
+**NITIN YADAV(Founder)**
 
-**PDF**
-
-Other formats may be considered in the future.
-
----
-
-## 💡 Philosophy
-
-Página isn't trying to become another complicated document platform.
-
-It focuses on one simple idea:
-
-> **Your PDF should feel like a book.**
-
-Upload it.
-
-Open it.
-
-Turn the page.
-
-Read.
+* LinkedIn: [Linkedin](https://www.linkedin.com/in/nitin-yadav-681850299/)
+* GitHub: [Github](https://github.com/nitinyadav2188)
+* X: [X](https://x.com/nitindotdev)
 
 ---
 
-## 👨‍💻 Author
-
-**NITIN YADAV**
-
-* LinkedIn: [nitin-yadav-681850299](https://www.linkedin.com/in/nitin-yadav-681850299/)
-* GitHub: [nitinyadav2188](https://github.com/nitinyadav2188)
-* X: [@nitindotdev](https://x.com/nitindotdev)
-
----
-
-## 📜 License
+## License
 
 Add the project's chosen license here.
