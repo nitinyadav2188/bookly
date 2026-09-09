@@ -16,6 +16,7 @@ Built by **[NITIN YADAV](https://www.linkedin.com/in/nitin-yadav-681850299/)** �
 - **Page memory** of the last page for the same file
 - **PWA install** for mobile home-screen use
 - **Capacitor Android** packaging from the same static export
+- **Experience feedback** — optional neo-brutal popup after meaningful use (first page flip, ~60s in reader, or a return visit). Rating + optional comment; dismissible with a ~10-day snooze
 
 ## Quick start
 
@@ -32,6 +33,15 @@ For local iteration you can also run `npm run dev` (Next.js Turbopack). Prefer `
 ## Privacy
 
 Your PDF stays private. Bookly opens and renders files **locally in the browser**. Nothing is uploaded to a server. Use **Download** to save the PDF to your device. This browser can also keep a local IndexedDB copy (with annotations) so you can continue reading later — still on your machine, never in the cloud.
+
+## Experience feedback
+
+Bookly may ask “How’s Bookly feeling?” after you’ve actually used it — not on first paint. Triggers: first successful page flip, about a minute in the reader, or ~50s into a return visit. **Not now** / submit snoozes the prompt for this session and about 10 days (`localStorage`).
+
+Because this is a **static export** (no API routes), feedback is recorded as:
+
+1. **Vercel Analytics** custom events — `experience_feedback` (with `rating`, `hasComment`, `trigger`) and `experience_feedback_dismiss`. Enable Web Analytics on the Vercel project; custom events appear in the Analytics dashboard.
+2. **Local log** — each submission is stored in IndexedDB (`bookly-feedback`) and mirrored in `localStorage` (`bookly-feedback-log`) so nothing is lost offline. Comments never leave the device unless you later add a backend.
 
 ## Install on phone
 

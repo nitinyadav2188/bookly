@@ -23,12 +23,16 @@ import {
 import { loadPdfDocument, renderPdfPageToCanvas, type OpenedPdf } from "@/lib/pdf";
 import { getSavedPage, savePage } from "@/lib/session";
 import { playPageTurnSound, unlockPageSound } from "@/lib/sound";
+import { emitPageFlipSignal, emitReaderClose, emitReaderOpen } from "@/lib/feedback";
 
 const SIZE_STRETCH = "stretch" as const;
 const CORNER_BOTTOM = "bottom" as const;
 const SWIPE_DISTANCE = 45;
 const SWIPE_TIMEOUT_MS = 280;
 const DRAG_THRESHOLD = 8;
+const ZOOM_MIN = 0.7;
+const ZOOM_MAX = 1.8;
+const ZOOM_STEP = 0.1;
 
 type BookReaderProps = {
   document: OpenedPdf;
@@ -204,6 +208,12 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     };
   }, [doc.id]);
 
+  // Signal meaningful reader use for the experience-feedback popup.
+  useEffect(() => {
+    emitReaderOpen();
+    return () => emitReaderClose();
+  }, []);
+
   // Persist the PDF in IndexedDB for long-period resume (same browser).
   useEffect(() => {
     let cancelled = false;
@@ -375,16 +385,16 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
 
         const host = hostRef.current;
         const measure = () => {
-          const z = zoomRef.current || 1;
-          let availW = Math.max(0, host.clientWidth / z);
-          let availH = Math.max(0, host.clientHeight / z);
+          // Size PageFlip from layout box only — visual zoom is CSS scale on the host.
+          let availW = Math.max(0, host.clientWidth);
+          let availH = Math.max(0, host.clientHeight);
           // Fallback if a wrapper collapsed % sizing (host 0×0) — use stage box.
           if (availW < 80 || availH < 80) {
             const stage = host.closest(".reader-stage") as HTMLElement | null;
             if (stage) {
               const pad = 24;
-              availW = Math.max(availW, (stage.clientWidth - pad) / z);
-              availH = Math.max(availH, (stage.clientHeight - pad) / z);
+              availW = Math.max(availW, stage.clientWidth - pad);
+              availH = Math.max(availH, stage.clientHeight - pad);
             }
           }
           // Desktop: fill the open-book frame more aggressively; touch stays compact.
@@ -469,12 +479,16 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           setJumpDraft(String(index + 1));
           savePage(doc.id, index);
           void updateLibraryProgress(doc.id, { lastPage: index });
+          const pageChanged = index !== lastIndexRef.current;
           const shouldSound =
             soundOnRef.current &&
-            index !== lastIndexRef.current &&
+            pageChanged &&
             Date.now() > ignoreSoundUntilRef.current;
           if (shouldSound) {
             playPageTurnSound(true);
+          }
+          if (pageChanged) {
+            emitPageFlipSignal();
           }
           lastIndexRef.current = index;
           void ensurePagesRendered(index);
@@ -592,8 +606,20 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     }
   }, [soundOn]);
 
-  const bumpZoom = useCallback((delta: number) => {
-    setZoom((z) => Math.min(1.6, Math.max(0.7, Math.round((z + delta) * 100) / 100)));
+  const clampZoom = useCallback((value: number) => {
+    const stepped = Math.round(value / ZOOM_STEP) * ZOOM_STEP;
+    return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(stepped * 100) / 100));
+  }, []);
+
+  const bumpZoom = useCallback(
+    (delta: number) => {
+      setZoom((z) => clampZoom(z + delta));
+    },
+    [clampZoom],
+  );
+
+  const resetZoom = useCallback(() => {
+    setZoom(1);
   }, []);
 
   const addHighlight = useCallback(

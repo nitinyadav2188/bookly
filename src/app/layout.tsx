@@ -3,6 +3,7 @@ import { Archivo_Black, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { BootSplashController } from "@/components/BootSplashController";
 import { BootSplashMage } from "@/components/BootSplashMage";
+import { ExperienceFeedback } from "@/components/ExperienceFeedback";
 import "./globals.css";
 
 const display = Archivo_Black({
@@ -126,6 +127,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </div>
         <BootSplashController />
         {children}
+        <ExperienceFeedback />
         <Analytics />
       </body>
     </html>
