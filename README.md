@@ -40,7 +40,7 @@ Página creates the digital book
      ↓
 Turn the pages
      ↓
-     Read
+    Read
 ```
 
 The goal is simple:
