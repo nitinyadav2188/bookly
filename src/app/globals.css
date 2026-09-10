@@ -486,19 +486,22 @@ body {
 .reader-shell.is-touch .reader-touch-frame::before {
   content: "";
   position: absolute;
-  inset: 1.5% 2.5% 2%;
+  inset: 0.8% 1.6% 1.2%;
   border-radius: 2px;
+  background: linear-gradient(160deg, #433628 0%, #2a2118 55%, #1a1410 100%);
   box-shadow:
-    0 0 0 3px var(--cover-outer),
-    0 0 0 4px var(--cover-edge),
-    0 16px 32px rgba(0, 0, 0, 0.4);
+    0 0 0 1px rgba(90, 72, 52, 0.4),
+    0 14px 28px rgba(0, 0, 0, 0.45);
   pointer-events: none;
   z-index: 0;
-  opacity: 0.9;
+  opacity: 1;
 }
 
 .reader-shell.is-touch .reader-book-host {
   z-index: 1;
+  /* Keep page slightly inset so cover rim peeks around edges */
+  width: calc(100% - 10px);
+  height: calc(100% - 10px);
 }
 
 .reader-book-host:not(.is-ready) {
@@ -561,9 +564,9 @@ body {
   gap: 1.25rem;
   padding: 1.25rem 1rem 1.75rem;
   background:
-    radial-gradient(ellipse 58% 46% at 50% 44%, rgba(92, 76, 56, 0.42) 0%, transparent 72%),
-    radial-gradient(ellipse 80% 40% at 50% 100%, rgba(0, 0, 0, 0.4) 0%, transparent 50%),
-    linear-gradient(180deg, #120f0c 0%, var(--desk-mid) 48%, #16120e 100%);
+    radial-gradient(ellipse 58% 46% at 50% 44%, rgba(110, 90, 68, 0.38) 0%, transparent 72%),
+    radial-gradient(ellipse 80% 40% at 50% 100%, rgba(0, 0, 0, 0.38) 0%, transparent 50%),
+    linear-gradient(180deg, #17130f 0%, #352a20 48%, #1a1511 100%);
 }
 
 .reader-shell.is-desktop .reader-book-frame {
@@ -576,14 +579,15 @@ body {
   max-width: min(1180px, calc(100% - 8.5rem));
   height: min(90vh, 100%);
   /* Cover thickness beyond the paper — elegant, not thick bars */
-  padding: 0.55rem 0.7rem 0.75rem;
+  padding: 0.65rem 0.85rem 0.85rem;
   border-radius: 3px 5px 5px 3px;
   background:
-    linear-gradient(145deg, var(--cover-rim) 0%, var(--cover-outer) 42%, var(--cover-edge) 100%);
+    linear-gradient(145deg, #4a3b2e 0%, #2f241c 45%, #1a1410 100%);
   box-shadow:
-    0 1px 0 rgba(255, 240, 220, 0.08) inset,
-    0 -1px 0 rgba(0, 0, 0, 0.35) inset,
-    0 22px 42px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 230, 200, 0.14) inset,
+    0 -2px 0 rgba(0, 0, 0, 0.4) inset,
+    0 0 0 1px rgba(90, 72, 52, 0.45),
+    0 22px 42px rgba(0, 0, 0, 0.55),
     0 6px 14px rgba(0, 0, 0, 0.35);
 }
 
@@ -605,26 +609,26 @@ body {
 .reader-shell.is-desktop .reader-book-frame::after {
   content: "";
   position: absolute;
-  top: 0.7rem;
-  right: 0.28rem;
-  bottom: 0.42rem;
-  width: 0.42rem;
+  top: 0.85rem;
+  right: 0.32rem;
+  bottom: 0.55rem;
+  width: 0.55rem;
   border-radius: 0 2px 2px 0;
   background:
-    linear-gradient(
-      90deg,
-      var(--paper-stack) 0%,
-      var(--paper-edge) 35%,
-      #cfc3ab 70%,
-      #b9ad94 100%
+    repeating-linear-gradient(
+      180deg,
+      #efe6d4 0px,
+      #efe6d4 2px,
+      #d8ccb4 2px,
+      #d8ccb4 3px
     );
   box-shadow:
-    -1px 0 0 rgba(0, 0, 0, 0.12),
-    2px 3px 0 rgba(0, 0, 0, 0.18),
-    0 1px 0 rgba(255, 255, 255, 0.25) inset;
+    -1px 0 0 rgba(0, 0, 0, 0.18),
+    2px 4px 0 rgba(0, 0, 0, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.3) inset;
   pointer-events: none;
   z-index: 2;
-  opacity: 0.92;
+  opacity: 0.95;
 }
 
 .reader-shell.is-desktop .reader-book-host {
