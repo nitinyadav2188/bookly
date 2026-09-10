@@ -207,7 +207,7 @@ export default function HomePage() {
 
       <main>
         <section
-          className="border-b-[3px] border-black bg-black text-white"
+          className="landing-hero border-b-[3px] border-black bg-black text-white"
           onDragOver={(e) => {
             e.preventDefault();
           }}
@@ -217,38 +217,40 @@ export default function HomePage() {
             if (file) void handleFile(file);
           }}
         >
-          <div className="bookly-container grid items-center gap-12 py-14 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 lg:py-16">
+          <div className="bookly-container grid items-center gap-8 py-9 sm:gap-10 sm:py-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 lg:py-16">
             <div className="max-w-2xl">
-              <span className="nb-tag">PDF only · Simple · Private</span>
-              <h1 className="mt-6 font-display text-[clamp(2.4rem,8vw,4.75rem)] leading-[0.95] text-white">
+              <p className="landing-brand font-display text-[clamp(2.75rem,14vw,4.25rem)] leading-[0.9] text-lime">
+                Página
+              </p>
+              <h1 className="mt-3 font-display text-[clamp(1.55rem,6.5vw,3.35rem)] leading-[0.98] text-white sm:mt-4">
                 Turn your PDF into a{" "}
                 <span className="bg-lime px-1 text-black">book.</span>
               </h1>
-              <p className="mt-5 max-w-md text-base leading-relaxed text-white/75 sm:text-lg">
+              <p className="mt-3 max-w-md text-[0.95rem] leading-relaxed text-white/75 sm:mt-4 sm:text-lg">
                 Upload a PDF and read it with the feeling of turning real pages.
               </p>
 
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <button type="button" onClick={openFilePicker} className="nb-btn nb-btn-lime text-sm">
+              <div className="landing-cta-row mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center">
+                <button
+                  type="button"
+                  onClick={openFilePicker}
+                  className="nb-btn nb-btn-lime min-h-11 w-full text-sm sm:w-auto"
+                >
                   Upload PDF →
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleInstall()}
-                  className="nb-btn nb-btn-blue text-sm"
+                  className="nb-btn nb-btn-blue min-h-11 w-full text-sm sm:w-auto"
                 >
                   Install on phone
                 </button>
               </div>
 
-              <p className="mt-3 font-mono-label text-[10px] font-bold text-white/50">
-                Install on phone · or use in browser — same private reader
-              </p>
-
               <button
                 type="button"
                 onClick={openUploadModal}
-                className="mt-4 font-mono-label text-[10px] font-bold text-white/55 underline-offset-4 hover:text-white hover:underline"
+                className="mt-3 font-mono-label text-[10px] font-bold text-white/55 underline-offset-4 hover:text-white hover:underline"
               >
                 Or drop a PDF here
               </button>
@@ -269,14 +271,14 @@ export default function HomePage() {
                       setScreen("reader");
                     }
                   }}
-                  className="nb-btn nb-btn-orange mt-4 text-sm"
+                  className="nb-btn nb-btn-orange mt-4 min-h-11 w-full text-sm sm:w-auto"
                 >
                   Continue reading {continueTarget.name}
                 </button>
               ) : null}
             </div>
 
-            <div className="justify-self-center lg:justify-self-end">
+            <div className="landing-hero-visual justify-self-center lg:justify-self-end">
               <HeroBook />
             </div>
           </div>

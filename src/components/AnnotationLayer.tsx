@@ -513,6 +513,8 @@ export function AnnotationLayer({
                   key={n.id}
                   className={`annotation-note vibe-${n.vibe} ${open ? "is-open" : ""} ${
                     selectedId === n.id ? "is-selected" : ""
+                  } ${n.x > 0.52 ? "popup-left" : "popup-right"} ${
+                    n.y > 0.58 ? "popup-above" : "popup-below"
                   }`}
                   style={{
                     left: `${n.x * 100}%`,
@@ -662,7 +664,8 @@ export function AnnotationToolbar({
           aria-pressed={tool === "highlight"}
         >
           <HighlighterIcon color={tool === "highlight" ? activeSolid : "#f5d76e"} />
-          Highlight
+          <span className="annot-tool-label-full">Highlight</span>
+          <span className="annot-tool-label-short">HL</span>
         </button>
         <button
           type="button"
@@ -676,7 +679,8 @@ export function AnnotationToolbar({
             paper={tool === "note" ? activeSolid : "#fff59d"}
             fold={NOTE_VIBES.find((v) => v.id === (tool === "note" ? vibe : "yellow"))?.fold ?? "#f0e06a"}
           />
-          Sticky note
+          <span className="annot-tool-label-full">Sticky note</span>
+          <span className="annot-tool-label-short">Note</span>
         </button>
 
         {tool === "highlight" ? (

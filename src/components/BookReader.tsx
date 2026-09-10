@@ -418,7 +418,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           if (availW < 80 || availH < 80) {
             const stage = host.closest(".reader-stage") as HTMLElement | null;
             if (stage) {
-              const pad = touchPrimary ? 12 : 20;
+              const pad = touchPrimary ? 8 : 20;
               availW = Math.max(availW, stage.clientWidth - pad);
               availH = Math.max(availH, stage.clientHeight - pad);
             }
@@ -427,8 +427,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           const aspect = pdfAspectRef.current > 0.4 ? pdfAspectRef.current : 1.414;
           // Landscape = two pages side by side; portrait/touch = one page.
           const pagesAcross = isNarrow || touchPrimary ? 1 : 2;
-          const maxPageW = pagesAcross === 1 ? availW * 0.98 : availW / 2.02;
-          const maxPageH = availH * (touchPrimary ? 0.97 : 0.98);
+          const maxPageW = pagesAcross === 1 ? availW * (touchPrimary ? 0.995 : 0.98) : availW / 2.02;
+          const maxPageH = availH * (touchPrimary ? 0.995 : 0.98);
 
           // Contain-fit the PDF page into the available slot (full page, no crop).
           let pageWidth = Math.floor(maxPageW);
@@ -1059,9 +1059,9 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           chromeVisible || annotateMode ? "visible-chrome" : "hidden-chrome"
         }`}
       >
-        <div className="reader-title-chip min-w-0 max-w-[42%] border-[3px] border-black bg-lime px-2.5 py-2 shadow-[4px_4px_0_#000] sm:max-w-none sm:px-3">
-          <p className="truncate font-display text-[11px] text-black sm:text-sm">{doc.name}</p>
-          {resumeHint ? (
+        <div className="reader-title-chip min-w-0 max-w-[34%] border-[3px] border-black bg-lime px-2 py-1.5 shadow-[4px_4px_0_#000] sm:max-w-[42%] sm:px-3 sm:py-2">
+          <p className="truncate font-display text-[10px] text-black sm:text-sm">{doc.name}</p>
+          {resumeHint && !touchPrimary ? (
             <p className="font-mono-label text-[9px] text-black/70">
               Continue from page {resumeHint}
             </p>
@@ -1069,14 +1069,14 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           {downloadFlash ? (
             <p className="font-mono-label text-[9px] text-black/80">{downloadFlash}</p>
           ) : null}
-          {libraryHint && !downloadFlash ? (
+          {libraryHint && !downloadFlash && !touchPrimary ? (
             <p className="font-mono-label text-[9px] text-black/70">{libraryHint}</p>
           ) : null}
           {markedFlash ? (
             <p className="font-mono-label text-[9px] text-black/80">highlighted</p>
           ) : null}
         </div>
-        <div className="reader-actions flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+        <div className="reader-actions flex flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={handleDownload}
@@ -1104,7 +1104,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             aria-label={annotateMode ? "Exit annotate mode" : "Enter annotate mode"}
             title={annotateMode ? "Done annotating" : "Annotate"}
           >
-            {annotateMode ? "Done" : "Annotate"}
+            {annotateMode ? "Done" : touchPrimary ? "Mark" : "Annotate"}
           </button>
           {!touchPrimary ? zoomControls : null}
           <button
@@ -1139,7 +1139,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         </div>
       </div>
 
-      {annotateMode ? (
+      {annotateMode && !touchPrimary ? (
         <div className="annotation-toolbar-wrap absolute inset-x-0 top-[4.25rem] z-20 flex justify-center px-2 sm:top-[4.5rem] sm:px-3">
           <AnnotationToolbar
             tool={annotTool}
@@ -1271,77 +1271,89 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       </div>
 
       <div
-        className={`reader-controls reader-bottom-chrome absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2 px-3 py-3 sm:px-4 sm:py-4 ${
+        className={`reader-controls reader-bottom-chrome absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-1.5 px-2 py-2.5 sm:gap-2 sm:px-4 sm:py-4 ${
           chromeVisible || annotateMode ? "visible-chrome" : "hidden-chrome"
         }`}
       >
-        {touchPrimary && !annotateMode ? (
-          <div className="reader-mobile-zoom-row flex flex-col items-center gap-1.5">
-            {zoomControls}
-            <p className="reader-swipe-hint font-mono-label text-[9px] font-bold text-white/55">
-              {zoom > 1.001
-                ? "Drag to pan · tap % to reset"
-                : "Swipe to turn · pinch-free zoom below"}
-            </p>
+        {touchPrimary && annotateMode ? (
+          <div className="annotation-toolbar-wrap annotation-toolbar-dock w-full max-w-lg px-0.5">
+            <AnnotationToolbar
+              tool={annotTool}
+              color={annotColor}
+              vibe={annotVibe}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onTool={setAnnotTool}
+              onColor={setAnnotColor}
+              onVibe={setAnnotVibe}
+              onUndo={undoAnnot}
+              onRedo={redoAnnot}
+            />
           </div>
         ) : null}
-        <div className="reader-pager flex items-center gap-0 border-[3px] border-black bg-cream shadow-[5px_5px_0_#000]">
-          {!touchPrimary && !annotateMode ? (
-            <button
-              type="button"
-              onClick={goPrev}
-              disabled={!ready || pageIndex <= 0}
-              className="border-r-[3px] border-black bg-orange px-4 py-3 font-display text-xs text-black disabled:opacity-35 sm:text-sm"
-            >
-              ← Prev
-            </button>
-          ) : null}
 
-          {editingJump ? (
-            <form
-              className="flex min-w-[7.5rem] items-center justify-center px-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                jumpToPage(jumpDraft);
-              }}
-            >
-              <input
-                autoFocus
-                inputMode="numeric"
-                value={jumpDraft}
-                onChange={(e) => setJumpDraft(e.target.value.replace(/[^\d]/g, ""))}
-                onBlur={() => jumpToPage(jumpDraft)}
-                className="w-14 border-[2px] border-black bg-white px-1 py-1 text-center font-mono-label text-[11px] font-bold text-black outline-none"
-                aria-label="Jump to page"
-              />
-              <span className="pl-1 font-mono-label text-[11px] font-bold text-black">
-                / {doc.pageCount}
-              </span>
-            </form>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setJumpDraft(String(pageIndex + 1));
-                setEditingJump(true);
-              }}
-              className="min-w-[7.5rem] px-3 py-3 text-center font-mono-label text-[11px] font-bold text-black"
-              title="Jump to page"
-            >
-              {pageLabel}
-            </button>
-          )}
-
-          {!touchPrimary && !annotateMode ? (
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={!ready || pageIndex >= doc.pageCount - 1}
-              className="border-l-[3px] border-black bg-lime px-4 py-3 font-display text-xs text-black disabled:opacity-35 sm:text-sm"
-            >
-              Next →
-            </button>
+        <div className="reader-bottom-tools flex w-full max-w-lg flex-wrap items-center justify-center gap-2">
+          {touchPrimary && !annotateMode ? (
+            <div className="reader-mobile-zoom-row">{zoomControls}</div>
           ) : null}
+          <div className="reader-pager flex items-center gap-0 border-[3px] border-black bg-cream shadow-[5px_5px_0_#000]">
+            {!touchPrimary && !annotateMode ? (
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={!ready || pageIndex <= 0}
+                className="border-r-[3px] border-black bg-orange px-4 py-3 font-display text-xs text-black disabled:opacity-35 sm:text-sm"
+              >
+                ← Prev
+              </button>
+            ) : null}
+
+            {editingJump ? (
+              <form
+                className="flex min-w-[6.5rem] items-center justify-center px-2 sm:min-w-[7.5rem]"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  jumpToPage(jumpDraft);
+                }}
+              >
+                <input
+                  autoFocus
+                  inputMode="numeric"
+                  value={jumpDraft}
+                  onChange={(e) => setJumpDraft(e.target.value.replace(/[^\d]/g, ""))}
+                  onBlur={() => jumpToPage(jumpDraft)}
+                  className="w-14 border-[2px] border-black bg-white px-1 py-1 text-center font-mono-label text-[11px] font-bold text-black outline-none"
+                  aria-label="Jump to page"
+                />
+                <span className="pl-1 font-mono-label text-[11px] font-bold text-black">
+                  / {doc.pageCount}
+                </span>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setJumpDraft(String(pageIndex + 1));
+                  setEditingJump(true);
+                }}
+                className="min-h-11 min-w-[6.5rem] px-3 py-2.5 text-center font-mono-label text-[11px] font-bold text-black sm:min-w-[7.5rem] sm:py-3"
+                title="Jump to page"
+              >
+                {pageLabel}
+              </button>
+            )}
+
+            {!touchPrimary && !annotateMode ? (
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={!ready || pageIndex >= doc.pageCount - 1}
+                className="border-l-[3px] border-black bg-lime px-4 py-3 font-display text-xs text-black disabled:opacity-35 sm:text-sm"
+              >
+                Next →
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
