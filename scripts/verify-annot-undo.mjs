@@ -1,5 +1,5 @@
 /**
- * Verify annotate undo/redo + toolbar controls.
+ * Verify annotate undo/redo + professional toolbar controls.
  */
 import { chromium } from "playwright";
 import path from "path";
@@ -19,11 +19,14 @@ const results = {
   undoDisabledInitially: false,
   redoDisabledInitially: false,
   highlightAdded: false,
+  highlightLooksSoft: false,
   undoEnabledAfter: false,
   undoRemovesHighlight: false,
   redoRestoresHighlight: false,
   noteAdded: false,
-  stickyToolActive: false,
+  noteToolActive: false,
+  notePinOnly: false,
+  emptyNoteDiscarded: false,
   errors,
 };
 
@@ -39,13 +42,13 @@ try {
 
   for (let i = 0; i < 50; i += 1) {
     await page.mouse.move(200 + i, 200);
-    if (await page.getByRole("button", { name: "Annotate" }).isVisible().catch(() => false)) break;
+    if (await page.getByRole("button", { name: /Annotate/i }).isVisible().catch(() => false)) break;
     await page.waitForTimeout(400);
   }
-  results.openReader = await page.getByRole("button", { name: "Annotate" }).isVisible();
+  results.openReader = await page.getByRole("button", { name: /Enter annotate mode|Annotate/i }).isVisible();
 
-  await page.getByRole("button", { name: "Annotate" }).click();
-  await page.getByText(/Drag to mark/i).waitFor({ state: "visible", timeout: 5000 });
+  await page.getByRole("button", { name: /Enter annotate mode|Annotate/i }).click();
+  await page.getByText(/Drag across the page to highlight/i).waitFor({ state: "visible", timeout: 5000 });
 
   const undoBtn = page.getByRole("button", { name: "Undo annotation" });
   const redoBtn = page.getByRole("button", { name: "Redo annotation" });
@@ -57,9 +60,9 @@ try {
   if (!box) throw new Error("No book host");
 
   const x0 = box.x + box.width * 0.35;
-  const y0 = box.y + box.height * 0.35;
+  const y0 = box.y + box.height * 0.38;
   const x1 = box.x + box.width * 0.55;
-  const y1 = box.y + box.height * 0.45;
+  const y1 = box.y + box.height * 0.4;
   await page.mouse.move(x0, y0);
   await page.mouse.down();
   await page.mouse.move(x1, y1, { steps: 8 });
@@ -67,6 +70,12 @@ try {
   await page.waitForTimeout(350);
 
   results.highlightAdded = (await page.locator(".annotation-highlight").count()) > 0;
+  results.highlightLooksSoft = await page.evaluate(() => {
+    const el = document.querySelector(".annotation-highlight");
+    if (!el) return false;
+    const cs = getComputedStyle(el);
+    return cs.borderWidth === "0px" || cs.borderStyle === "none";
+  });
   results.undoEnabledAfter = !(await undoBtn.isDisabled());
 
   await undoBtn.click();
@@ -78,16 +87,23 @@ try {
   await page.waitForTimeout(250);
   results.redoRestoresHighlight = redoEnabled && (await page.locator(".annotation-highlight").count()) > 0;
 
-  await page.getByRole("button", { name: "Sticky" }).click();
-  results.stickyToolActive = await page
-    .locator(".annot-tool-note.is-on")
-    .isVisible()
-    .catch(() => false);
-  await page.mouse.click(box.x + box.width * 0.65, box.y + box.height * 0.55);
-  await page.waitForTimeout(300);
-  results.noteAdded = (await page.locator(".annotation-sticky").count()) > 0;
+  await page.getByRole("button", { name: "Note", exact: true }).click();
+  results.noteToolActive = await page.locator(".annot-tool-note.is-on").isVisible().catch(() => false);
 
-  await page.screenshot({ path: path.join(OUT, "bookly-annot-undo.png") });
+  await page.mouse.click(box.x + box.width * 0.65, box.y + box.height * 0.55);
+  await page.waitForTimeout(350);
+  results.noteAdded = (await page.locator(".annotation-note").count()) > 0;
+  results.notePinOnly = (await page.locator(".annotation-note-pin").count()) > 0;
+
+  // Empty note should remain while focused; discard after blur with no text.
+  await page.locator(".annotation-note-card textarea").first().waitFor({ state: "visible", timeout: 5000 });
+  const before = await page.locator(".annotation-note").count();
+  await page.locator(".annotation-note-card textarea").first().blur();
+  await page.waitForTimeout(350);
+  const after = await page.locator(".annotation-note").count();
+  results.emptyNoteDiscarded = after < before;
+
+  await page.screenshot({ path: path.join(OUT, "annot-professional.png") });
 
   const ok = Object.entries(results)
     .filter(([k]) => k !== "errors")
@@ -96,7 +112,7 @@ try {
   console.log(JSON.stringify({ ok, ...results }, null, 2));
   if (!ok || errors.length) process.exitCode = 1;
 } catch (err) {
-  await page.screenshot({ path: path.join(OUT, "bookly-annot-undo-error.png") }).catch(() => {});
+  await page.screenshot({ path: path.join(OUT, "annot-professional-error.png") }).catch(() => {});
   console.error("FAIL", err);
   console.log(JSON.stringify({ ok: false, ...results, message: String(err) }, null, 2));
   process.exitCode = 1;

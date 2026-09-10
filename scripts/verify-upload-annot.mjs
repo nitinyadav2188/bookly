@@ -109,7 +109,7 @@ try {
   // Annotations
   await revealChrome();
   await page.getByRole("button", { name: "Annotate" }).click();
-  await page.getByText(/Drag to mark/i).waitFor({ state: "visible", timeout: 5000 });
+  await page.getByText(/Drag across the page to highlight/i).waitFor({ state: "visible", timeout: 5000 });
 
   // Draw a highlight on the book area
   const host = page.locator(".reader-book-host");
@@ -126,14 +126,15 @@ try {
   await page.waitForTimeout(400);
   results.annotateHighlight = (await page.locator(".annotation-highlight").count()) > 0;
 
-  await page.getByRole("button", { name: "Sticky" }).click();
+  await page.getByRole("button", { name: "Note", exact: true }).click();
   await page.mouse.click(box.x + box.width * 0.65, box.y + box.height * 0.55);
   await page.waitForTimeout(300);
-  const sticky = page.locator(".annotation-sticky textarea").first();
-  if (await sticky.count()) {
-    await sticky.fill("this slaps");
+  const note = page.locator(".annotation-note-card textarea").first();
+  if (await note.count()) {
+    await note.fill("Check this passage");
+    await note.blur();
   }
-  results.annotateNote = (await page.locator(".annotation-sticky").count()) > 0;
+  results.annotateNote = (await page.locator(".annotation-note").count()) > 0;
 
   await page.screenshot({ path: path.join(OUT, "bookly-annotate.png") });
   copy("bookly-annotate.png");

@@ -152,8 +152,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const [editingJump, setEditingJump] = useState(false);
   const [annotateMode, setAnnotateMode] = useState(false);
   const [annotTool, setAnnotTool] = useState<"highlight" | "note">("highlight");
-  const [annotColor, setAnnotColor] = useState<HighlightColor>("lime");
-  const [annotVibe, setAnnotVibe] = useState<NoteVibe>("note to self");
+  const [annotColor, setAnnotColor] = useState<HighlightColor>("yellow");
+  const [annotVibe, setAnnotVibe] = useState<NoteVibe>("note");
   const [highlights, setHighlights] = useState<PageHighlight[]>([]);
   const [notes, setNotes] = useState<PageNote[]>([]);
   const [markedFlash, setMarkedFlash] = useState(false);
@@ -726,19 +726,29 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     [pushAnnotHistory],
   );
 
-  const addNote = useCallback(
-    (n: PageNote) => {
-      pushAnnotHistory();
-      setNotes((prev) => [...prev, n]);
-    },
-    [pushAnnotHistory],
-  );
+  const addNote = useCallback((n: PageNote) => {
+    // History commits on first typed character (or explicit delete), not on pin place.
+    setNotes((prev) => [...prev, n]);
+  }, []);
+
+  const discardEmptyNote = useCallback((id: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+    noteEditBatchRef.current.delete(id);
+  }, []);
 
   const updateNote = useCallback(
     (id: string, text: string) => {
-      // Coalesce keystrokes for one sticky into a single undo step.
+      // Coalesce keystrokes for one note into a single undo step.
       if (!noteEditBatchRef.current.has(id)) {
-        historyRef.current.push(annotsRef.current);
+        const existing = annotsRef.current.notes.find((n) => n.id === id);
+        const snapshot =
+          existing && existing.text.trim()
+            ? annotsRef.current
+            : {
+                highlights: annotsRef.current.highlights,
+                notes: annotsRef.current.notes.filter((n) => n.id !== id),
+              };
+        historyRef.current.push(snapshot);
         noteEditBatchRef.current.add(id);
         syncHistoryFlags();
       }
@@ -1063,7 +1073,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             <p className="font-mono-label text-[9px] text-black/70">{libraryHint}</p>
           ) : null}
           {markedFlash ? (
-            <p className="font-mono-label text-[9px] text-black/80">marked</p>
+            <p className="font-mono-label text-[9px] text-black/80">highlighted</p>
           ) : null}
         </div>
         <div className="reader-actions flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
@@ -1079,13 +1089,22 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           </button>
           <button
             type="button"
-            onClick={() => setAnnotateMode((v) => !v)}
+            onClick={() => {
+              setAnnotateMode((v) => {
+                const next = !v;
+                if (!next) {
+                  // Drop unfinished empty notes when leaving annotate mode.
+                  setNotes((prev) => prev.filter((n) => n.text.trim().length > 0));
+                }
+                return next;
+              });
+            }}
             className={`reader-chip ${annotateMode ? "reader-chip-pink" : "reader-chip-white"}`}
             aria-pressed={annotateMode}
             aria-label={annotateMode ? "Exit annotate mode" : "Enter annotate mode"}
             title={annotateMode ? "Done annotating" : "Annotate"}
           >
-            {annotateMode ? "Done" : "Mark"}
+            {annotateMode ? "Done" : "Annotate"}
           </button>
           {!touchPrimary ? zoomControls : null}
           <button
@@ -1199,6 +1218,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
                 onAddNote={addNote}
                 onUpdateNote={updateNote}
                 onDeleteNote={deleteNote}
+                onDiscardEmptyNote={discardEmptyNote}
                 onDeleteHighlight={deleteHighlight}
               />
             ) : null}
