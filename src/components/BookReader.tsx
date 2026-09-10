@@ -91,29 +91,26 @@ function clientToBookPos(flip: PageFlip, clientX: number, clientY: number): Gest
 }
 
 /**
- * StPageFlip flip()/flipNext()/flipPrev() feed points through convertToBook
- * (`x - left`, `y - top`). Stock flipNext uses `y = height - 2` without adding
- * `top`, so when the page is vertically centered (typical mobile portrait) the
- * point fails `disableFlipByClick` corner checks and taps/swipes no-op.
- *
- * Portrait mode parks the visible page on the RIGHT half of a virtual spread
- * (`left = mid - 1.5*pageWidth`). Hitting `left+10` lands on the off-screen
- * half and BACK curls look empty — aim at the visible page's near (spine) edge.
+ * Programmatic page turns. StPageFlip's `disableFlipByClick` corner test rejects
+ * many valid BACK points in portrait (visible page is the right half of a
+ * virtual spread). Buttons / taps / swipes already decided the direction, so
+ * we briefly clear that flag and pass hybrid coords that include `rect.top`
+ * (stock flipNext omits it and no-ops when the book is vertically centered).
  */
 function animateFlip(flip: PageFlip, direction: "prev" | "next") {
   const rect = flip.getBoundsRect();
   const y = rect.top + rect.height - 2;
-  const portrait = flip.getOrientation() === "portrait";
-  let x: number;
-  if (direction === "next") {
-    x = rect.left + rect.width - 10;
-  } else if (portrait) {
-    // Left edge of the visible (right-half) page → BACK curl with a real page.
-    x = rect.left + rect.pageWidth + Math.max(12, Math.floor(rect.pageWidth * 0.04));
-  } else {
-    x = rect.left + 10;
+  // Left virtual corner → BACK; right corner → FORWARD (portrait + landscape).
+  const x = direction === "next" ? rect.left + rect.width - 10 : rect.left + 10;
+
+  const settings = flip.getSettings() as { disableFlipByClick?: boolean };
+  const prevFlag = settings.disableFlipByClick;
+  settings.disableFlipByClick = false;
+  try {
+    flip.getFlipController().flip({ x, y });
+  } finally {
+    settings.disableFlipByClick = prevFlag;
   }
-  flip.getFlipController().flip({ x, y });
 }
 
 export function BookReader({ document: doc, onExit }: BookReaderProps) {
