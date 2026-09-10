@@ -1167,7 +1167,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             </p>
           </div>
         ) : null}
-        <div className="reader-pager flex items-center gap-0 border-[3px] border-black bg-cream shadow-[5px_5px_0_#c8f542]">
+        <div className="reader-pager flex items-center gap-0 border-[3px] border-black bg-cream shadow-[5px_5px_0_#000]">
           {!touchPrimary && !annotateMode ? (
             <button
               type="button"
