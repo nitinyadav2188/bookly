@@ -1,5 +1,5 @@
 /**
- * Verify annotate undo/redo + professional toolbar controls.
+ * Verify annotate undo/redo + Adobe Acrobat–style Comment toolbar.
  */
 import { chromium } from "playwright";
 import path from "path";
@@ -48,7 +48,7 @@ try {
   results.openReader = await page.getByRole("button", { name: /Enter annotate mode|Annotate/i }).isVisible();
 
   await page.getByRole("button", { name: /Enter annotate mode|Annotate/i }).click();
-  await page.getByText(/Drag across the page to highlight/i).waitFor({ state: "visible", timeout: 5000 });
+  await page.getByText(/Drag to highlight text/i).waitFor({ state: "visible", timeout: 5000 });
 
   const undoBtn = page.getByRole("button", { name: "Undo annotation" });
   const redoBtn = page.getByRole("button", { name: "Redo annotation" });
@@ -87,18 +87,18 @@ try {
   await page.waitForTimeout(250);
   results.redoRestoresHighlight = redoEnabled && (await page.locator(".annotation-highlight").count()) > 0;
 
-  await page.getByRole("button", { name: "Note", exact: true }).click();
-  results.noteToolActive = await page.locator(".annot-tool-note.is-on").isVisible().catch(() => false);
+  await page.getByRole("button", { name: /Sticky note/i }).click();
+  results.noteToolActive = await page.locator(".adobe-tool-note.is-on").isVisible().catch(() => false);
 
   await page.mouse.click(box.x + box.width * 0.65, box.y + box.height * 0.55);
   await page.waitForTimeout(350);
   results.noteAdded = (await page.locator(".annotation-note").count()) > 0;
-  results.notePinOnly = (await page.locator(".annotation-note-pin").count()) > 0;
+  results.notePinOnly = (await page.locator(".adobe-sticky-pin").count()) > 0;
 
   // Empty note should remain while focused; discard after blur with no text.
-  await page.locator(".annotation-note-card textarea").first().waitFor({ state: "visible", timeout: 5000 });
+  await page.locator(".adobe-comment-popup textarea").first().waitFor({ state: "visible", timeout: 5000 });
   const before = await page.locator(".annotation-note").count();
-  await page.locator(".annotation-note-card textarea").first().blur();
+  await page.locator(".adobe-comment-popup textarea").first().blur();
   await page.waitForTimeout(350);
   const after = await page.locator(".annotation-note").count();
   results.emptyNoteDiscarded = after < before;

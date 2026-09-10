@@ -1,6 +1,9 @@
-export type HighlightColor = "yellow" | "green" | "pink" | "blue";
+/** Adobe Acrobat–style annotation model (Highlight Text + Sticky Note). */
 
-export type NoteVibe = "note" | "question" | "important";
+export type HighlightColor = "yellow" | "green" | "blue" | "pink" | "red";
+
+/** Sticky note paper color — mirrors Acrobat sticky appearance options. */
+export type NoteVibe = "yellow" | "green" | "blue" | "pink" | "red";
 
 export type PageHighlight = {
   id: string;
@@ -30,30 +33,47 @@ const PREFIX = "bookly:annots:v1:";
 
 const EMPTY: DocAnnotations = { highlights: [], notes: [] };
 
+/** Acrobat-like highlighter fills (multiply over page ink). */
 export const HIGHLIGHT_COLORS: { id: HighlightColor; label: string; css: string; solid: string }[] = [
-  { id: "yellow", label: "Yellow", css: "rgba(250, 204, 21, 0.42)", solid: "#facc15" },
-  { id: "green", label: "Green", css: "rgba(74, 222, 128, 0.38)", solid: "#4ade80" },
-  { id: "pink", label: "Pink", css: "rgba(244, 114, 182, 0.36)", solid: "#f472b6" },
-  { id: "blue", label: "Blue", css: "rgba(96, 165, 250, 0.4)", solid: "#60a5fa" },
+  { id: "yellow", label: "Yellow", css: "rgba(255, 230, 0, 0.45)", solid: "#ffe600" },
+  { id: "green", label: "Green", css: "rgba(0, 200, 80, 0.38)", solid: "#00c850" },
+  { id: "blue", label: "Blue", css: "rgba(0, 160, 255, 0.38)", solid: "#00a0ff" },
+  { id: "pink", label: "Pink", css: "rgba(255, 80, 180, 0.36)", solid: "#ff50b4" },
+  { id: "red", label: "Red", css: "rgba(255, 60, 60, 0.36)", solid: "#ff3c3c" },
 ];
 
-export const NOTE_VIBES: { id: NoteVibe; label: string }[] = [
-  { id: "note", label: "Note" },
-  { id: "question", label: "Question" },
-  { id: "important", label: "Important" },
+export const NOTE_VIBES: { id: NoteVibe; label: string; paper: string; fold: string }[] = [
+  { id: "yellow", label: "Yellow", paper: "#fff59d", fold: "#f0e06a" },
+  { id: "green", label: "Green", paper: "#c8f7c5", fold: "#9ed89a" },
+  { id: "blue", label: "Blue", paper: "#cfe8ff", fold: "#9ec8f0" },
+  { id: "pink", label: "Pink", paper: "#ffd0ea", fold: "#f0a0c8" },
+  { id: "red", label: "Red", paper: "#ffcfcf", fold: "#f0a0a0" },
 ];
 
-/** Map legacy saved colors/vibes into the current palette. */
 function normalizeColor(raw: unknown): HighlightColor {
   if (raw === "lime") return "green";
-  if (raw === "yellow" || raw === "green" || raw === "pink" || raw === "blue") return raw;
+  if (raw === "yellow" || raw === "green" || raw === "blue" || raw === "pink" || raw === "red") {
+    return raw;
+  }
   return "yellow";
 }
 
 function normalizeVibe(raw: unknown): NoteVibe {
-  if (raw === "question" || raw === "important" || raw === "note") return raw;
-  if (raw === "note to self" || raw === "brain dump" || raw === "lore" || raw === "tea") return "note";
-  return "note";
+  if (raw === "yellow" || raw === "green" || raw === "blue" || raw === "pink" || raw === "red") {
+    return raw;
+  }
+  if (
+    raw === "note" ||
+    raw === "question" ||
+    raw === "important" ||
+    raw === "note to self" ||
+    raw === "brain dump" ||
+    raw === "lore" ||
+    raw === "tea"
+  ) {
+    return "yellow";
+  }
+  return "yellow";
 }
 
 export function highlightFill(color: HighlightColor): string {
@@ -65,7 +85,12 @@ export function highlightSolid(color: HighlightColor): string {
 }
 
 export function noteVibeLabel(vibe: NoteVibe): string {
-  return NOTE_VIBES.find((v) => v.id === vibe)?.label ?? "Note";
+  return NOTE_VIBES.find((v) => v.id === vibe)?.label ?? "Yellow";
+}
+
+export function notePaper(vibe: NoteVibe): { paper: string; fold: string } {
+  const found = NOTE_VIBES.find((v) => v.id === vibe);
+  return { paper: found?.paper ?? "#fff59d", fold: found?.fold ?? "#f0e06a" };
 }
 
 function sanitizeAnnotations(parsed: Partial<DocAnnotations>): DocAnnotations {
@@ -92,7 +117,7 @@ function sanitizeAnnotations(parsed: Partial<DocAnnotations>): DocAnnotations {
           page: Number((n as PageNote).page) || 0,
           x: Number((n as PageNote).x) || 0,
           y: Number((n as PageNote).y) || 0,
-          text: String((n as PageNote).text || "").slice(0, 280),
+          text: String((n as PageNote).text || "").slice(0, 500),
           vibe: normalizeVibe((n as PageNote).vibe),
         }))
     : [];
@@ -133,7 +158,6 @@ export function cloneAnnotations(data: DocAnnotations): DocAnnotations {
   };
 }
 
-/** Snapshot stack for undo / redo of annotation mutations. */
 export function createAnnotationHistory(limit = ANNOT_HISTORY_LIMIT) {
   let past: DocAnnotations[] = [];
   let future: DocAnnotations[] = [];
@@ -149,7 +173,6 @@ export function createAnnotationHistory(limit = ANNOT_HISTORY_LIMIT) {
     canRedo() {
       return future.length > 0;
     },
-    /** Record current state before applying a mutation. Clears redo branch. */
     push(current: DocAnnotations) {
       past = [...past, cloneAnnotations(current)].slice(-limit);
       future = [];

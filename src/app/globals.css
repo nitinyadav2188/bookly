@@ -1076,7 +1076,7 @@ body {
   box-shadow: 1px 1px 0 #000;
 }
 
-/* Annotations — clean marks over the physical page */
+/* Annotations — Adobe Acrobat–style Comment tools */
 .annotation-layer {
   position: absolute;
   inset: 0;
@@ -1089,7 +1089,7 @@ body {
 }
 
 .annotation-layer.is-active.tool-highlight {
-  cursor: crosshair;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath d='M3 15 12 6l2 2-9 9-3 1z' fill='%23ffe600' stroke='%23333'/%3E%3C/svg%3E") 2 18, crosshair;
 }
 
 .annotation-layer.is-active.tool-note {
@@ -1105,23 +1105,23 @@ body {
 .annotation-highlight {
   position: absolute;
   border: 0;
-  border-radius: 2px;
+  border-radius: 1px;
   box-shadow: none;
   pointer-events: auto;
   cursor: pointer;
   mix-blend-mode: multiply;
   padding: 0;
   background-clip: padding-box;
-  transition: box-shadow 0.12s ease, outline 0.12s ease;
+  transition: outline 0.12s ease;
 }
 
 .annotation-highlight.is-draft {
   pointer-events: none;
-  opacity: 0.75;
+  opacity: 0.72;
 }
 
 .annotation-highlight.is-selected {
-  outline: 2px solid rgba(20, 16, 12, 0.55);
+  outline: 1px solid rgba(0, 102, 204, 0.85);
   outline-offset: 1px;
   z-index: 3;
 }
@@ -1133,22 +1133,28 @@ body {
 
 .annotation-delete-chip {
   position: absolute;
-  top: -1.35rem;
+  top: -1.25rem;
   right: 0;
   z-index: 4;
-  border: 2px solid #000;
-  background: #fff;
-  color: #000;
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0.2rem 0.4rem;
-  box-shadow: 2px 2px 0 #000;
+  border: 1px solid #a0a0a0;
+  border-radius: 2px;
+  background: #f5f5f5;
+  color: #222;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 0.15rem 0.4rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   cursor: pointer;
-  line-height: 1;
+  line-height: 1.2;
   white-space: nowrap;
+}
+
+.annotation-delete-chip:hover {
+  background: #ebebeb;
+  border-color: #777;
 }
 
 .annotation-note {
@@ -1159,95 +1165,109 @@ body {
   pointer-events: auto;
 }
 
+.adobe-sticky-pin,
 .annotation-note-pin {
   position: absolute;
   left: 0;
   top: 0;
-  width: 1.35rem;
-  height: 1.35rem;
-  transform: translate(-50%, -50%);
-  border: 2px solid #1a1510;
-  border-radius: 999px;
-  background: #fff8e7;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  width: 1.5rem;
+  height: 1.5rem;
+  transform: translate(-35%, -35%);
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  box-shadow: none;
   display: grid;
   place-items: center;
   padding: 0;
   cursor: pointer;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
-.annotation-note-dot {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 999px;
-  background: #1a1510;
+.adobe-sticky-pin:hover,
+.annotation-note-pin:hover {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
 
-.annotation-note.vibe-question .annotation-note-pin {
-  background: #e8f0ff;
-}
-.annotation-note.vibe-question .annotation-note-dot {
-  background: #3b5bff;
+.adobe-sticky-icon {
+  display: block;
+  pointer-events: none;
 }
 
-.annotation-note.vibe-important .annotation-note-pin {
-  background: #ffe8e8;
-}
-.annotation-note.vibe-important .annotation-note-dot {
-  background: #d10000;
-}
-
+.annotation-note.is-selected .adobe-sticky-pin,
+.annotation-note.is-open .adobe-sticky-pin,
 .annotation-note.is-selected .annotation-note-pin,
 .annotation-note.is-open .annotation-note-pin {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(26, 21, 16, 0.55), 0 4px 10px rgba(0, 0, 0, 0.28);
+  outline: 1px solid #0066cc;
+  outline-offset: 1px;
+  border-radius: 2px;
 }
 
+.adobe-comment-popup,
 .annotation-note-card {
   position: absolute;
-  left: 0.85rem;
-  top: -0.35rem;
-  width: min(190px, 58vw);
-  border: 2px solid #1a1510;
-  background: #fffdf6;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
-  border-radius: 4px;
+  left: 1.1rem;
+  top: -0.2rem;
+  width: min(220px, 62vw);
+  border: 1px solid #b0b0b0;
+  background: #fffef8;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+  border-radius: 2px;
   overflow: hidden;
   z-index: 5;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
+.adobe-comment-popup-head,
 .annotation-note-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.4rem;
-  padding: 0.35rem 0.45rem;
-  border-bottom: 1px solid rgba(26, 21, 16, 0.14);
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.55rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: rgba(26, 21, 16, 0.72);
-  background: rgba(255, 248, 230, 0.9);
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 600;
+  color: #333;
+  background: linear-gradient(180deg, #fafafa 0%, #f0f0f0 100%);
 }
 
+.adobe-comment-popup-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.adobe-comment-popup-title .adobe-sticky-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.adobe-comment-delete,
 .annotation-note-delete {
   border: 0;
   background: transparent;
-  color: rgba(26, 21, 16, 0.7);
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.55rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 700;
+  color: #555;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 400;
   cursor: pointer;
-  padding: 0.1rem 0.15rem;
+  padding: 0.1rem 0.25rem;
+  border-radius: 2px;
 }
 
+.adobe-comment-delete:hover,
 .annotation-note-delete:hover {
-  color: #d10000;
+  color: #c00;
+  background: rgba(0, 0, 0, 0.04);
 }
 
+.adobe-comment-popup textarea,
 .annotation-note-card textarea,
 .annotation-note-body {
   display: block;
@@ -1255,21 +1275,23 @@ body {
   border: 0;
   background: transparent;
   resize: none;
-  padding: 0.55rem 0.6rem 0.65rem;
-  font-family: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.78rem;
-  line-height: 1.35;
-  color: #1a1510;
+  padding: 0.5rem 0.6rem 0.65rem;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #222;
   text-align: left;
-  min-height: 3.2rem;
+  min-height: 3.4rem;
   margin: 0;
 }
 
+.adobe-comment-popup textarea:focus,
 .annotation-note-card textarea:focus {
   outline: none;
-  background: rgba(255, 255, 255, 0.55);
+  background: #fff;
 }
 
+.annotation-layer.is-passive .adobe-sticky-pin,
 .annotation-layer.is-passive .annotation-note-pin {
   pointer-events: auto;
 }
@@ -1278,145 +1300,133 @@ body {
   pointer-events: none;
 }
 
+.adobe-comment-toolbar,
 .annotation-toolbar {
   pointer-events: auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.3rem;
-  border: 3px solid #000;
-  background: rgba(253, 252, 235, 0.96);
-  backdrop-filter: blur(6px);
-  padding: 0.45rem 0.55rem 0.4rem;
-  box-shadow: 4px 4px 0 #000;
+  gap: 0.2rem;
+  border: 1px solid #c8c8c8;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #f7f7f7 0%, #ececec 100%);
+  backdrop-filter: none;
+  padding: 0.35rem 0.5rem 0.3rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
   max-width: min(720px, 100%);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
+.adobe-comment-toolbar-row,
 .annotation-toolbar-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
+.adobe-toolbar-divider,
 .annotation-toolbar-divider {
-  width: 2px;
+  width: 1px;
   align-self: stretch;
-  min-height: 1.4rem;
-  background: rgba(0, 0, 0, 0.35);
-  margin: 0 0.15rem;
-  flex: 0 0 2px;
+  min-height: 1.5rem;
+  background: #c0c0c0;
+  margin: 0 0.2rem;
+  flex: 0 0 1px;
 }
 
+.adobe-comment-toolbar .adobe-tool,
 .annotation-toolbar .annot-tool {
-  border: 2px solid #000;
-  background: #fff;
-  padding: 0.4rem 0.65rem;
-  min-height: 2.2rem;
-  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.68rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
-  color: #000;
-  box-shadow: 2px 2px 0 #000;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  padding: 0.28rem 0.55rem;
+  min-height: 1.9rem;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #222;
+  box-shadow: none;
   cursor: pointer;
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background 0.1s ease, border-color 0.1s ease;
 }
 
+.adobe-comment-toolbar .adobe-tool:hover:not(:disabled),
 .annotation-toolbar .annot-tool:hover:not(:disabled) {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 #000;
+  transform: none;
+  background: #e8e8e8;
+  border-color: #c0c0c0;
+  box-shadow: none;
 }
 
+.adobe-comment-toolbar .adobe-tool:active:not(:disabled),
 .annotation-toolbar .annot-tool:active:not(:disabled) {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 #000;
+  transform: none;
+  background: #ddd;
+  box-shadow: none;
 }
 
+.adobe-comment-toolbar .adobe-tool:disabled,
 .annotation-toolbar .annot-tool:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
-  box-shadow: 1px 1px 0 #000;
+  box-shadow: none;
 }
 
-.annotation-toolbar .annot-tool-highlight.is-on {
-  background: #facc15;
-  color: #000;
-}
-
+.adobe-comment-toolbar .adobe-tool.is-on,
+.annotation-toolbar .annot-tool-highlight.is-on,
 .annotation-toolbar .annot-tool-note.is-on {
-  background: #fff8e7;
-  color: #000;
+  background: #dff0ff;
+  border-color: #7ab0e0;
+  color: #111;
+  box-shadow: inset 0 0 0 1px rgba(0, 102, 204, 0.12);
 }
 
-.annotation-toolbar .annot-tool-undo:not(:disabled),
-.annotation-toolbar .annot-tool-redo:not(:disabled) {
-  background: #fff;
-  color: #000;
-}
-
+.adobe-swatches,
 .annotation-swatches {
   display: inline-flex;
-  gap: 0.28rem;
-  margin-left: 0.05rem;
-  padding: 0.2rem 0.3rem;
-  border: 2px solid #000;
+  gap: 0.22rem;
+  margin-left: 0.1rem;
+  padding: 0.15rem 0.28rem;
+  border: 1px solid #c8c8c8;
+  border-radius: 2px;
   background: #fff;
-  box-shadow: 2px 2px 0 #000;
+  box-shadow: none;
 }
 
+.adobe-swatch,
 .annotation-swatches .swatch {
-  width: 1.05rem;
-  height: 1.05rem;
-  border: 2px solid rgba(0, 0, 0, 0.75);
-  border-radius: 999px;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 1px;
   padding: 0;
   cursor: pointer;
 }
 
+.adobe-swatch.is-on,
 .annotation-swatches .swatch.is-on {
-  outline: 2px solid #000;
+  outline: 2px solid #0066cc;
   outline-offset: 1px;
 }
 
-.annotation-vibe-pills {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-
-.annotation-vibe-pills .annot-vibe {
-  border: 2px solid #000;
-  background: #fff;
-  padding: 0.3rem 0.5rem;
-  min-height: 2rem;
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.55rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: #000;
-  box-shadow: 2px 2px 0 #000;
-  cursor: pointer;
-}
-
-.annotation-vibe-pills .annot-vibe.is-on {
-  background: #1a1510;
-  color: #fff;
-}
-
+.adobe-comment-hint,
 .annotation-hint {
   width: 100%;
   margin: 0;
   text-align: center;
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.55rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #000;
-  opacity: 0.5;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #555;
+  opacity: 1;
 }
 
 .reader-shell.is-annotate .reader-book-host .stf__parent {

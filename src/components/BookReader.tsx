@@ -153,7 +153,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const [annotateMode, setAnnotateMode] = useState(false);
   const [annotTool, setAnnotTool] = useState<"highlight" | "note">("highlight");
   const [annotColor, setAnnotColor] = useState<HighlightColor>("yellow");
-  const [annotVibe, setAnnotVibe] = useState<NoteVibe>("note");
+  const [annotVibe, setAnnotVibe] = useState<NoteVibe>("yellow");
   const [highlights, setHighlights] = useState<PageHighlight[]>([]);
   const [notes, setNotes] = useState<PageNote[]>([]);
   const [markedFlash, setMarkedFlash] = useState(false);

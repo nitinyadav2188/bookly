@@ -6,6 +6,7 @@ import {
   NOTE_VIBES,
   highlightFill,
   makeAnnotId,
+  notePaper,
   noteVibeLabel,
   type HighlightColor,
   type NoteVibe,
@@ -43,6 +44,45 @@ type AnnotationLayerProps = {
 
 function clamp01(n: number) {
   return Math.min(1, Math.max(0, n));
+}
+
+/** Acrobat-style sticky note with folded corner. */
+function StickyNoteIcon({ paper, fold }: { paper: string; fold: string }) {
+  return (
+    <svg
+      className="adobe-sticky-icon"
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      aria-hidden
+    >
+      <path
+        d="M3.5 2.5h13.2L20.5 6.3V21.5H3.5V2.5Z"
+        fill={paper}
+        stroke="#5a4a2a"
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+      />
+      <path d="M16.7 2.5v3.8h3.8" fill={fold} stroke="#5a4a2a" strokeWidth="1.1" strokeLinejoin="round" />
+      <path d="M7 10.2h10M7 13.4h10M7 16.6h6.5" stroke="#8a7040" strokeWidth="1.15" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function HighlighterIcon({ color }: { color: string }) {
+  return (
+    <svg className="adobe-hl-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden>
+      <path
+        d="M4.2 16.8 14.8 6.2a1.6 1.6 0 0 1 2.3 0l.7.7a1.6 1.6 0 0 1 0 2.3L7.2 19.8 3.5 20.5l.7-3.7Z"
+        fill={color}
+        stroke="#333"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+      <path d="M13.6 7.4 16.6 10.4" stroke="#333" strokeWidth="1" />
+      <path d="M3.8 20.2h7.2" stroke={color} strokeWidth="2.4" strokeLinecap="round" opacity="0.85" />
+    </svg>
+  );
 }
 
 /** Prefer StPageFlip items that are actually painted on screen. */
@@ -223,8 +263,6 @@ export function AnnotationLayer({
     const layer = layerRef.current;
     if (!layer) return null;
     const rect = layer.getBoundingClientRect();
-    // Layer sits inside a CSS-scaled host — use unscaled offsetWidth for coords
-    // that match getBoundingClientRect-based page boxes (also in screen space).
     return { x: clientX - rect.left, y: clientY - rect.top };
   };
 
@@ -233,7 +271,11 @@ export function AnnotationLayer({
     if (e.button !== 0 && e.pointerType === "mouse") return;
 
     const target = e.target as HTMLElement | null;
-    if (target?.closest(".annotation-highlight, .annotation-note, .annotation-note-card")) {
+    if (
+      target?.closest(
+        ".annotation-highlight, .annotation-note, .adobe-comment-popup, .annotation-note-card",
+      )
+    ) {
       return;
     }
 
@@ -465,6 +507,7 @@ export function AnnotationLayer({
             .filter((n) => n.page === box.page)
             .map((n) => {
               const open = openNoteId === n.id || (showInteractive && !n.text && selectedId === n.id);
+              const paper = notePaper(n.vibe);
               return (
                 <div
                   key={n.id}
@@ -479,8 +522,8 @@ export function AnnotationLayer({
                 >
                   <button
                     type="button"
-                    className="annotation-note-pin"
-                    aria-label={`${noteVibeLabel(n.vibe)} note`}
+                    className="adobe-sticky-pin annotation-note-pin"
+                    aria-label={`${noteVibeLabel(n.vibe)} sticky note`}
                     title={n.text || noteVibeLabel(n.vibe)}
                     onClick={() => {
                       if (!showInteractive) {
@@ -491,17 +534,20 @@ export function AnnotationLayer({
                       setOpenNoteId(n.id);
                     }}
                   >
-                    <span className="annotation-note-dot" />
+                    <StickyNoteIcon paper={paper.paper} fold={paper.fold} />
                   </button>
 
                   {open ? (
-                    <div className="annotation-note-card">
-                      <div className="annotation-note-card-head">
-                        <span>{noteVibeLabel(n.vibe)}</span>
+                    <div className="adobe-comment-popup annotation-note-card">
+                      <div className="adobe-comment-popup-head annotation-note-card-head">
+                        <span className="adobe-comment-popup-title">
+                          <StickyNoteIcon paper={paper.paper} fold={paper.fold} />
+                          Comment
+                        </span>
                         {showInteractive ? (
                           <button
                             type="button"
-                            className="annotation-note-delete"
+                            className="adobe-comment-delete annotation-note-delete"
                             aria-label="Delete note"
                             onClick={() => {
                               onDeleteNote(n.id);
@@ -514,7 +560,7 @@ export function AnnotationLayer({
                         ) : (
                           <button
                             type="button"
-                            className="annotation-note-delete"
+                            className="adobe-comment-delete annotation-note-delete"
                             aria-label="Close note"
                             onClick={() => setOpenNoteId(null)}
                           >
@@ -526,13 +572,16 @@ export function AnnotationLayer({
                         <textarea
                           autoFocus={!n.text || openNoteId === n.id}
                           value={n.text}
-                          placeholder="Write a note…"
+                          placeholder="Add a comment…"
                           rows={3}
                           maxLength={280}
                           onChange={(e) => onUpdateNote(n.id, e.target.value.slice(0, 280))}
                           onBlur={(e) => {
                             const related = e.relatedTarget as Node | null;
-                            if (related && e.currentTarget.closest(".annotation-note")?.contains(related)) {
+                            if (
+                              related &&
+                              e.currentTarget.closest(".annotation-note")?.contains(related)
+                            ) {
                               return;
                             }
                             scheduleDiscardIfEmpty(n.id, e.currentTarget.value);
@@ -596,33 +645,47 @@ export function AnnotationToolbar({
   onUndo: () => void;
   onRedo: () => void;
 }) {
+  const activeSolid =
+    tool === "highlight"
+      ? HIGHLIGHT_COLORS.find((c) => c.id === color)?.solid ?? "#ffe600"
+      : NOTE_VIBES.find((v) => v.id === vibe)?.paper ?? "#fff59d";
+
   return (
-    <div className="annotation-toolbar">
-      <div className="annotation-toolbar-row" role="group" aria-label="Annotation tools">
+    <div className="adobe-comment-toolbar annotation-toolbar">
+      <div className="adobe-comment-toolbar-row annotation-toolbar-row" role="group" aria-label="Comment tools">
         <button
           type="button"
-          className={`annot-tool annot-tool-highlight ${tool === "highlight" ? "is-on" : ""}`}
+          className={`adobe-tool adobe-tool-highlight annot-tool annot-tool-highlight ${
+            tool === "highlight" ? "is-on" : ""
+          }`}
           onClick={() => onTool("highlight")}
           aria-pressed={tool === "highlight"}
         >
+          <HighlighterIcon color={tool === "highlight" ? activeSolid : "#f5d76e"} />
           Highlight
         </button>
         <button
           type="button"
-          className={`annot-tool annot-tool-note ${tool === "note" ? "is-on" : ""}`}
+          className={`adobe-tool adobe-tool-note annot-tool annot-tool-note ${
+            tool === "note" ? "is-on" : ""
+          }`}
           onClick={() => onTool("note")}
           aria-pressed={tool === "note"}
         >
-          Note
+          <StickyNoteIcon
+            paper={tool === "note" ? activeSolid : "#fff59d"}
+            fold={NOTE_VIBES.find((v) => v.id === (tool === "note" ? vibe : "yellow"))?.fold ?? "#f0e06a"}
+          />
+          Sticky note
         </button>
 
         {tool === "highlight" ? (
-          <div className="annotation-swatches" role="group" aria-label="Highlight color">
+          <div className="adobe-swatches annotation-swatches" role="group" aria-label="Highlight color">
             {HIGHLIGHT_COLORS.map((c) => (
               <button
                 key={c.id}
                 type="button"
-                className={`swatch swatch-${c.id} ${color === c.id ? "is-on" : ""}`}
+                className={`adobe-swatch swatch swatch-${c.id} ${color === c.id ? "is-on" : ""}`}
                 aria-label={c.label}
                 aria-pressed={color === c.id}
                 style={{ background: c.solid }}
@@ -631,25 +694,25 @@ export function AnnotationToolbar({
             ))}
           </div>
         ) : (
-          <div className="annotation-vibe-pills" role="group" aria-label="Note type">
+          <div className="adobe-swatches annotation-swatches" role="group" aria-label="Sticky note color">
             {NOTE_VIBES.map((v) => (
               <button
                 key={v.id}
                 type="button"
-                className={`annot-vibe ${vibe === v.id ? "is-on" : ""}`}
+                className={`adobe-swatch swatch swatch-${v.id} ${vibe === v.id ? "is-on" : ""}`}
+                aria-label={v.label}
                 aria-pressed={vibe === v.id}
+                style={{ background: v.paper }}
                 onClick={() => onVibe(v.id)}
-              >
-                {v.label}
-              </button>
+              />
             ))}
           </div>
         )}
 
-        <span className="annotation-toolbar-divider" aria-hidden />
+        <span className="adobe-toolbar-divider annotation-toolbar-divider" aria-hidden />
         <button
           type="button"
-          className="annot-tool annot-tool-undo"
+          className="adobe-tool adobe-tool-undo annot-tool annot-tool-undo"
           onClick={onUndo}
           disabled={!canUndo}
           aria-label="Undo annotation"
@@ -659,7 +722,7 @@ export function AnnotationToolbar({
         </button>
         <button
           type="button"
-          className="annot-tool annot-tool-redo"
+          className="adobe-tool adobe-tool-redo annot-tool annot-tool-redo"
           onClick={onRedo}
           disabled={!canRedo}
           aria-label="Redo annotation"
@@ -668,10 +731,10 @@ export function AnnotationToolbar({
           Redo
         </button>
       </div>
-      <p className="annotation-hint">
+      <p className="adobe-comment-hint annotation-hint">
         {tool === "highlight"
-          ? "Drag across the page to highlight"
-          : "Tap the page to place a note"}
+          ? "Drag to highlight text"
+          : "Click the page to place a sticky note"}
       </p>
     </div>
   );
