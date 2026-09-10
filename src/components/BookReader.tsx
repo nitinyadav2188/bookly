@@ -447,7 +447,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           minHeight: 300,
           maxHeight: touchPrimary ? 1100 : 1200,
           drawShadow: true,
-          maxShadowOpacity: touchPrimary ? 0.5 : 0.72,
+          // Richer flip shadows for a physical page-turn; keep mobile a touch softer.
+          maxShadowOpacity: touchPrimary ? 0.58 : 0.82,
           showCover: false,
           mobileScrollSupport: false,
           swipeDistance: SWIPE_DISTANCE,
