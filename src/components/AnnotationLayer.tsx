@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   HIGHLIGHT_COLORS,
   NOTE_VIBES,
@@ -514,7 +515,7 @@ export function AnnotationLayer({
                   className={`annotation-note vibe-${n.vibe} ${open ? "is-open" : ""} ${
                     selectedId === n.id ? "is-selected" : ""
                   } ${n.x > 0.52 ? "popup-left" : "popup-right"} ${
-                    n.y > 0.58 ? "popup-above" : "popup-below"
+                    n.y > 0.45 ? "popup-above" : "popup-below"
                   }`}
                   style={{
                     left: `${n.x * 100}%`,
@@ -540,67 +541,84 @@ export function AnnotationLayer({
                   </button>
 
                   {open ? (
-                    <div className="adobe-comment-popup annotation-note-card">
-                      <div className="adobe-comment-popup-head annotation-note-card-head">
-                        <span className="adobe-comment-popup-title">
-                          <StickyNoteIcon paper={paper.paper} fold={paper.fold} />
-                          Comment
-                        </span>
-                        {showInteractive ? (
-                          <button
-                            type="button"
-                            className="adobe-comment-delete annotation-note-delete"
-                            aria-label="Delete note"
-                            onClick={() => {
-                              onDeleteNote(n.id);
-                              setOpenNoteId(null);
-                              setSelectedId(null);
-                            }}
-                          >
-                            Delete
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="adobe-comment-delete annotation-note-delete"
-                            aria-label="Close note"
-                            onClick={() => setOpenNoteId(null)}
-                          >
-                            Close
-                          </button>
-                        )}
-                      </div>
-                      {showInteractive ? (
-                        <textarea
-                          autoFocus={!n.text || openNoteId === n.id}
-                          value={n.text}
-                          placeholder="Add a comment…"
-                          rows={3}
-                          maxLength={280}
-                          onChange={(e) => onUpdateNote(n.id, e.target.value.slice(0, 280))}
-                          onBlur={(e) => {
-                            const related = e.relatedTarget as Node | null;
-                            if (
-                              related &&
-                              e.currentTarget.closest(".annotation-note")?.contains(related)
-                            ) {
-                              return;
-                            }
-                            scheduleDiscardIfEmpty(n.id, e.currentTarget.value);
-                          }}
-                          onFocus={() => {
-                            if (discardTimerRef.current != null) {
-                              window.clearTimeout(discardTimerRef.current);
-                              discardTimerRef.current = null;
-                            }
-                            setOpenNoteId(n.id);
-                            setSelectedId(n.id);
-                          }}
-                        />
-                      ) : (
-                        <p className="annotation-note-body">{n.text || "Empty note"}</p>
-                      )}
-                    </div>
+                    (() => {
+                      const popup = (
+                        <div
+                          className={`adobe-comment-popup annotation-note-card ${
+                            isNarrow ? "annotation-note-portal" : ""
+                          }`}
+                          onPointerDown={(e) => e.stopPropagation()}
+                        >
+                          <div className="adobe-comment-popup-head annotation-note-card-head">
+                            <span className="adobe-comment-popup-title">
+                              <StickyNoteIcon paper={paper.paper} fold={paper.fold} />
+                              Comment
+                            </span>
+                            {showInteractive ? (
+                              <button
+                                type="button"
+                                className="adobe-comment-delete annotation-note-delete"
+                                aria-label="Delete note"
+                                onClick={() => {
+                                  onDeleteNote(n.id);
+                                  setOpenNoteId(null);
+                                  setSelectedId(null);
+                                }}
+                              >
+                                Delete
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="adobe-comment-delete annotation-note-delete"
+                                aria-label="Close note"
+                                onClick={() => setOpenNoteId(null)}
+                              >
+                                Close
+                              </button>
+                            )}
+                          </div>
+                          {showInteractive ? (
+                            <textarea
+                              autoFocus={!n.text || openNoteId === n.id}
+                              value={n.text}
+                              placeholder="Add a comment…"
+                              rows={3}
+                              maxLength={280}
+                              onChange={(e) => onUpdateNote(n.id, e.target.value.slice(0, 280))}
+                              onBlur={(e) => {
+                                const related = e.relatedTarget as Node | null;
+                                if (
+                                  related &&
+                                  (e.currentTarget
+                                    .closest(".annotation-note, .annotation-note-portal")
+                                    ?.contains(related) ||
+                                    document
+                                      .querySelector(".annotation-note-portal")
+                                      ?.contains(related))
+                                ) {
+                                  return;
+                                }
+                                scheduleDiscardIfEmpty(n.id, e.currentTarget.value);
+                              }}
+                              onFocus={() => {
+                                if (discardTimerRef.current != null) {
+                                  window.clearTimeout(discardTimerRef.current);
+                                  discardTimerRef.current = null;
+                                }
+                                setOpenNoteId(n.id);
+                                setSelectedId(n.id);
+                              }}
+                            />
+                          ) : (
+                            <p className="annotation-note-body">{n.text || "Empty note"}</p>
+                          )}
+                        </div>
+                      );
+                      return isNarrow && typeof document !== "undefined"
+                        ? createPortal(popup, document.body)
+                        : popup;
+                    })()
                   ) : null}
                 </div>
               );
@@ -738,7 +756,7 @@ export function AnnotationToolbar({
       <p className="adobe-comment-hint annotation-hint">
         {tool === "highlight"
           ? "Drag to highlight text"
-          : "Click the page to place a sticky note"}
+          : "Tap the page to place a sticky note"}
       </p>
     </div>
   );

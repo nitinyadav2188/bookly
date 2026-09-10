@@ -1413,6 +1413,11 @@ body {
 
 .reader-shell.is-touch .annotation-toolbar-row {
   gap: 0.35rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  justify-content: flex-start;
+  padding-bottom: 0.1rem;
 }
 
 .reader-shell.is-touch .annotation-toolbar .annot-tool {
@@ -1437,7 +1442,7 @@ body {
 
 .reader-shell.is-touch .annotation-hint,
 .reader-shell.is-touch .adobe-comment-hint {
-  font-size: 0.65rem;
+  display: none;
 }
 
 .reader-shell.is-touch .adobe-sticky-pin,
@@ -1450,6 +1455,26 @@ body {
 .reader-shell.is-touch .annotation-note-card {
   width: min(210px, 72vw);
   max-width: calc(100vw - 1.5rem);
+}
+
+/* Keep sticky popups clear of the bottom-docked annotate chrome.
+   Portaled to document.body so book transform doesn't trap fixed. */
+.annotation-note-portal.adobe-comment-popup,
+.annotation-note-portal.annotation-note-card {
+  position: fixed !important;
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: max(5.5rem, calc(env(safe-area-inset-bottom) + 4.75rem)) !important;
+  transform: translateX(-50%) !important;
+  width: min(220px, 86vw) !important;
+  max-width: calc(100vw - 1.5rem) !important;
+  z-index: 80 !important;
+}
+
+.reader-shell.is-touch .adobe-toolbar-divider,
+.reader-shell.is-touch .annotation-toolbar-divider {
+  display: none;
 }
 
 .adobe-toolbar-divider,

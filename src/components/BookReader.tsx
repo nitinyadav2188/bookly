@@ -1296,6 +1296,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           {touchPrimary && !annotateMode ? (
             <div className="reader-mobile-zoom-row">{zoomControls}</div>
           ) : null}
+          {!(touchPrimary && annotateMode) ? (
           <div className="reader-pager flex items-center gap-0 border-[3px] border-black bg-cream shadow-[5px_5px_0_#000]">
             {!touchPrimary && !annotateMode ? (
               <button
@@ -1354,6 +1355,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
               </button>
             ) : null}
           </div>
+          ) : null}
         </div>
       </div>
     </div>
