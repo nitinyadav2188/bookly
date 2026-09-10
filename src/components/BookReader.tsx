@@ -22,16 +22,17 @@ import {
 } from "@/lib/library";
 import { loadPdfDocument, renderPdfPageToCanvas, type OpenedPdf } from "@/lib/pdf";
 import { getSavedPage, savePage } from "@/lib/session";
-import { playPageTurnSound, unlockPageSound } from "@/lib/sound";
+import { playPageTurnSound, unlockPageSound, warmPageSound } from "@/lib/sound";
 import { emitPageFlipSignal, emitReaderClose, emitReaderOpen } from "@/lib/feedback";
 
 const SIZE_STRETCH = "stretch" as const;
 const SWIPE_DISTANCE = 45;
 const SWIPE_TIMEOUT_MS = 280;
 const DRAG_THRESHOLD = 8;
-const ZOOM_MIN = 0.7;
-const ZOOM_MAX = 1.8;
-const ZOOM_STEP = 0.1;
+/** 100% = full-page fit; allow slight overview zoom-out and clear zoom-in. */
+const ZOOM_MIN = 0.85;
+const ZOOM_MAX = 2;
+const ZOOM_STEP = 0.15;
 
 type BookReaderProps = {
   document: OpenedPdf;
@@ -94,15 +95,25 @@ function clientToBookPos(flip: PageFlip, clientX: number, clientY: number): Gest
  * (`x - left`, `y - top`). Stock flipNext uses `y = height - 2` without adding
  * `top`, so when the page is vertically centered (typical mobile portrait) the
  * point fails `disableFlipByClick` corner checks and taps/swipes no-op.
- * Pass real bottom corners in that hybrid space (include `top` on y).
+ *
+ * Portrait mode parks the visible page on the RIGHT half of a virtual spread
+ * (`left = mid - 1.5*pageWidth`). Hitting `left+10` lands on the off-screen
+ * half and BACK curls look empty — aim at the visible page's near (spine) edge.
  */
 function animateFlip(flip: PageFlip, direction: "prev" | "next") {
   const rect = flip.getBoundsRect();
   const y = rect.top + rect.height - 2;
-  flip.getFlipController().flip({
-    x: direction === "next" ? rect.left + rect.width - 10 : rect.left + 10,
-    y,
-  });
+  const portrait = flip.getOrientation() === "portrait";
+  let x: number;
+  if (direction === "next") {
+    x = rect.left + rect.width - 10;
+  } else if (portrait) {
+    // Left edge of the visible (right-half) page → BACK curl with a real page.
+    x = rect.left + rect.pageWidth + Math.max(12, Math.floor(rect.pageWidth * 0.04));
+  } else {
+    x = rect.left + 10;
+  }
+  flip.getFlipController().flip({ x, y });
 }
 
 export function BookReader({ document: doc, onExit }: BookReaderProps) {
@@ -139,6 +150,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const [resumeHint, setResumeHint] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
   const [jumpDraft, setJumpDraft] = useState("");
   const [editingJump, setEditingJump] = useState(false);
   const [annotateMode, setAnnotateMode] = useState(false);
@@ -153,6 +165,14 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const [canRedo, setCanRedo] = useState(false);
   const [downloadFlash, setDownloadFlash] = useState<string | null>(null);
   const [libraryHint, setLibraryHint] = useState<string | null>(null);
+  const pdfAspectRef = useRef(1.414); // A4-ish default until first page measures
+  const panDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
   const historyRef = useRef(createAnnotationHistory());
   const annotsRef = useRef({ highlights, notes });
   const noteEditBatchRef = useRef<Set<string>>(new Set());
@@ -289,7 +309,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           return;
         }
         try {
-          await renderPdfPageToCanvas(pdf, index + 1, canvas);
+          await renderPdfPageToCanvas(pdf, index + 1, canvas, isNarrow ? 1800 : 2200);
           renderedRef.current.add(index);
           pageEl?.classList.remove("loading");
           pageEl?.classList.remove("render-error");
@@ -350,6 +370,19 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         }
         pdfRef.current = pdf;
 
+        // Use real PDF page aspect so the book fills the stage (full-page fit).
+        try {
+          const probe = await pdf.getPage(1);
+          const vp = probe.getViewport({ scale: 1 });
+          if (vp.width > 0 && vp.height > 0) {
+            pdfAspectRef.current = vp.height / vp.width;
+          }
+        } catch {
+          // keep default
+        }
+
+        warmPageSound();
+
         let saved = getSavedPage(doc.id);
         if (saved == null) {
           try {
@@ -382,28 +415,35 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
 
         const host = hostRef.current;
         const measure = () => {
-          // Size PageFlip from layout box only — visual zoom is CSS scale on the host.
+          // Size PageFlip from layout box — 100% zoom = max full-page fit.
           let availW = Math.max(0, host.clientWidth);
           let availH = Math.max(0, host.clientHeight);
-          // Fallback if a wrapper collapsed % sizing (host 0×0) — use stage box.
           if (availW < 80 || availH < 80) {
             const stage = host.closest(".reader-stage") as HTMLElement | null;
             if (stage) {
-              const pad = 24;
+              const pad = touchPrimary ? 12 : 20;
               availW = Math.max(availW, stage.clientWidth - pad);
               availH = Math.max(availH, stage.clientHeight - pad);
             }
           }
-          // Desktop: fill the open-book frame more aggressively; touch stays compact.
-          const widthDivisor = isNarrow ? 1.08 : touchPrimary ? 2.15 : 2.02;
-          const pageWidth = Math.min(
-            touchPrimary ? 560 : 640,
-            Math.max(160, Math.floor(availW / widthDivisor)),
-          );
-          const pageHeight = Math.min(
-            Math.floor(availH * (touchPrimary ? 0.92 : 0.96)),
-            Math.floor(pageWidth * 1.38),
-          );
+
+          const aspect = pdfAspectRef.current > 0.4 ? pdfAspectRef.current : 1.414;
+          // Landscape = two pages side by side; portrait/touch = one page.
+          const pagesAcross = isNarrow || touchPrimary ? 1 : 2;
+          const maxPageW = pagesAcross === 1 ? availW * 0.98 : availW / 2.02;
+          const maxPageH = availH * (touchPrimary ? 0.97 : 0.98);
+
+          // Contain-fit the PDF page into the available slot (full page, no crop).
+          let pageWidth = Math.floor(maxPageW);
+          let pageHeight = Math.floor(pageWidth * aspect);
+          if (pageHeight > maxPageH) {
+            pageHeight = Math.floor(maxPageH);
+            pageWidth = Math.floor(pageHeight / aspect);
+          }
+
+          pageWidth = Math.min(touchPrimary ? 720 : 680, Math.max(160, pageWidth));
+          pageHeight = Math.min(touchPrimary ? 1200 : 1100, Math.max(180, pageHeight));
+
           return { pageWidth, pageHeight, availW, availH };
         };
 
@@ -442,17 +482,18 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           width: pageWidth,
           height: pageHeight,
           size: SIZE_STRETCH,
-          minWidth: 220,
-          maxWidth: touchPrimary ? 720 : 780,
-          minHeight: 300,
-          maxHeight: touchPrimary ? 1100 : 1200,
+          minWidth: 200,
+          maxWidth: touchPrimary ? 820 : 760,
+          minHeight: 280,
+          maxHeight: touchPrimary ? 1400 : 1280,
           drawShadow: true,
           // Richer flip shadows for a physical page-turn; keep mobile a touch softer.
-          maxShadowOpacity: touchPrimary ? 0.58 : 0.82,
+          maxShadowOpacity: touchPrimary ? 0.62 : 0.88,
           showCover: false,
           mobileScrollSupport: false,
           swipeDistance: SWIPE_DISTANCE,
-          flippingTime: touchPrimary ? 650 : 820,
+          // Slightly longer so BACK curls read as a real page turn.
+          flippingTime: touchPrimary ? 720 : 900,
           usePortrait: true,
           autoSize: true,
           startPage,
@@ -471,20 +512,21 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         readyRef.current = true;
         setStatus("");
 
-          flip.on("flip", (e) => {
+        flip.on("changeState", (e) => {
+          // Fire sound as the curl begins — feels tied to the gesture.
+          if (String(e.data) !== "flipping") return;
+          if (!soundOnRef.current) return;
+          if (Date.now() <= ignoreSoundUntilRef.current) return;
+          playPageTurnSound(true);
+        });
+
+        flip.on("flip", (e) => {
           const index = Number(e.data);
           setPageIndex(index);
           setJumpDraft(String(index + 1));
           savePage(doc.id, index);
           void updateLibraryProgress(doc.id, { lastPage: index });
           const pageChanged = index !== lastIndexRef.current;
-          const shouldSound =
-            soundOnRef.current &&
-            pageChanged &&
-            Date.now() > ignoreSoundUntilRef.current;
-          if (shouldSound) {
-            playPageTurnSound(true);
-          }
           if (pageChanged) {
             emitPageFlipSignal();
           }
@@ -611,13 +653,62 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
 
   const bumpZoom = useCallback(
     (delta: number) => {
-      setZoom((z) => clampZoom(z + delta));
+      setZoom((z) => {
+        const next = clampZoom(z + delta);
+        if (next <= 1) setPan({ x: 0, y: 0 });
+        return next;
+      });
     },
     [clampZoom],
   );
 
   const resetZoom = useCallback(() => {
     setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, []);
+
+  const onPanPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (zoom <= 1.001 || annotateMode) return;
+      // When zoomed, prefer pan over page-turn on the stage chrome.
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      panDragRef.current = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        originX: pan.x,
+        originY: pan.y,
+      };
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+    },
+    [zoom, annotateMode, pan.x, pan.y],
+  );
+
+  const onPanPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = panDragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    const limit = 220 * Math.max(0, zoom - 1);
+    setPan({
+      x: Math.max(-limit, Math.min(limit, drag.originX + dx)),
+      y: Math.max(-limit, Math.min(limit, drag.originY + dy)),
+    });
+  }, [zoom]);
+
+  const onPanPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = panDragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    panDragRef.current = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const addHighlight = useCallback(
@@ -689,6 +780,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const onGesturePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (annotateMode) return;
+      if (zoom > 1.001) return; // zoomed: pan on stage, not page-turn
       if (!touchPrimary || !readyRef.current) return;
       const flip = flipRef.current;
       if (!flip) return;
@@ -717,7 +809,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         // Synthetic / non-capturable pointers (e.g. test harness)
       }
     },
-    [touchPrimary, annotateMode],
+    [touchPrimary, annotateMode, zoom],
   );
 
   const onGesturePointerMove = useCallback(
@@ -1048,7 +1140,14 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         </div>
       ) : null}
 
-      <div className="reader-stage">
+      <div
+        className="reader-stage"
+        onPointerDown={zoom > 1.001 ? onPanPointerDown : undefined}
+        onPointerMove={zoom > 1.001 ? onPanPointerMove : undefined}
+        onPointerUp={zoom > 1.001 ? onPanPointerUp : undefined}
+        onPointerCancel={zoom > 1.001 ? onPanPointerUp : undefined}
+        style={zoom > 1.001 ? { cursor: "grab" } : undefined}
+      >
         {!ready && !error ? (
           <div className="pointer-events-none absolute z-10 border-[3px] border-black bg-lime px-4 py-3 font-display text-sm text-black shadow-[4px_4px_0_#000]">
             {status || "Opening book…"}
@@ -1082,7 +1181,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             className={`reader-book-host ${ready ? "is-ready" : ""}`}
             style={{
               visibility: ready ? "visible" : "hidden",
-              transform: `scale(${zoom})`,
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
               transformOrigin: "center center",
             }}
           >
@@ -1163,7 +1262,9 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           <div className="reader-mobile-zoom-row flex flex-col items-center gap-1.5">
             {zoomControls}
             <p className="reader-swipe-hint font-mono-label text-[9px] font-bold text-white/55">
-              Swipe to turn · tap % to reset zoom
+              {zoom > 1.001
+                ? "Drag to pan · tap % to reset"
+                : "Swipe to turn · pinch-free zoom below"}
             </p>
           </div>
         ) : null}

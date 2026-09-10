@@ -394,7 +394,12 @@ body {
   will-change: transform;
   touch-action: none;
   transform-origin: center center;
-  transition: transform 0.16s ease;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reader-shell.is-zoomed .reader-book-host {
+  /* Snappier while panning; avoid fighting drag */
+  transition: none;
 }
 
 .reader-zoom {
@@ -452,9 +457,19 @@ body {
   pointer-events: auto;
 }
 
-/* Keep zoomed pages centered; clip overflow so chrome stays usable */
+/* While zoomed, pan the stage — don't fight StPageFlip mouse drags */
+.reader-shell.is-zoomed .reader-book-host .stf__parent,
+.reader-shell.is-zoomed .reader-gesture-layer {
+  pointer-events: none;
+}
+
 .reader-shell.is-zoomed .reader-stage {
   overflow: hidden;
+  cursor: grab;
+}
+
+.reader-shell.is-zoomed .reader-stage:active {
+  cursor: grabbing;
 }
 
 .reader-shell.is-zoomed .reader-touch-frame,
@@ -537,9 +552,9 @@ body {
 
 .reader-shell.is-touch .reader-book-host {
   z-index: 1;
-  /* Inset enough for leather + sheet stack to read clearly */
-  width: calc(100% - 22px);
-  height: calc(100% - 20px);
+  /* Nearly full-bleed page; thin leather rim still visible */
+  width: calc(100% - 14px);
+  height: calc(100% - 12px);
 }
 
 .reader-shell.is-touch .book-page {
@@ -620,10 +635,11 @@ body {
   justify-content: center;
   flex: 1 1 auto;
   min-width: 0;
-  max-width: min(1180px, calc(100% - 8.5rem));
-  height: min(90vh, 100%);
-  /* Leather cover clearly beyond the paper — still elegant, not cartoon bars */
-  padding: 0.95rem 1.2rem 1.15rem 1.1rem;
+  max-width: min(1240px, calc(100% - 7.5rem));
+  height: min(92vh, 100%);
+  /* Leather cover — slim padding so PDF pages fill more of the frame */
+  padding: 0.7rem 0.85rem 0.9rem 0.8rem;
+  overflow: visible;
   border-radius: 4px 6px 6px 4px;
   background:
     var(--leather-grain),
@@ -863,8 +879,8 @@ body {
   width: 100% !important;
   height: 100% !important;
   display: block;
-  object-fit: contain;
-  /* Soft paper behind PDF pixels — does not recolor ink */
+  /* Fill the page box — book size already matches PDF aspect */
+  object-fit: fill;
   background: var(--paper-ivory);
 }
 
