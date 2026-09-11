@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo_Black, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { AuthSessionProvider } from "@/components/AuthSessionProvider";
 import { BootSplashController } from "@/components/BootSplashController";
 import { BootSplashMage } from "@/components/BootSplashMage";
 import { ExperienceFeedback } from "@/components/ExperienceFeedback";
@@ -126,8 +127,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
         <BootSplashController />
-        {children}
-        <ExperienceFeedback />
+        <AuthSessionProvider>
+          {children}
+          <ExperienceFeedback />
+        </AuthSessionProvider>
         <Analytics />
       </body>
     </html>

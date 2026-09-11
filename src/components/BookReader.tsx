@@ -7,6 +7,7 @@ import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { AnnotationLayer, AnnotationToolbar } from "@/components/AnnotationLayer";
 import { MyNotesPanel } from "@/components/MyNotesPanel";
+import { UserMenu } from "@/components/UserMenu";
 import {
   createAnnotationHistory,
   defaultMeaningForColor,
@@ -1331,6 +1332,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
               FULL
             </button>
           ) : null}
+          <UserMenu variant="reader" />
           <button
             type="button"
             onClick={onExit}

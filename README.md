@@ -4,13 +4,14 @@
 
 Upload a PDF, open it as a book, turn pages, and read.
 
-**No accounts. No cloud uploads. No unnecessary document-platform features.**
+**Guest-first.** Upload and read without an account. Optional sign-in is identity only — PDFs stay local.
 
 ---
 
 ## Features
 
 * **Landing → Upload → Reader** — three simple screens
+* **Optional accounts** — Auth.js email/password (+ Google when configured)
 * **Realistic page flips**
 * **Local PDF rendering** with PDF.js
 * **Private by design** — PDFs stay on the user's device
@@ -94,16 +95,28 @@ No installation is required.
 
 ## Tech Stack
 
-* **Next.js** — static export
+* **Next.js** — server build for Auth.js; optional static export via `build:static` for Capacitor
 * **React**
 * **TypeScript**
 * **Tailwind CSS**
+* **Auth.js (NextAuth v5)** — email/password + optional Google
+* **SQLite (better-sqlite3)** — local user accounts (`DATABASE_URL`)
 * **PDF.js** — local PDF rendering
 * **StPageFlip** — realistic page turning
 * **IndexedDB** — local document and annotation storage
 * **Web App Manifest** — PWA installation
 * **Service Worker** — offline-friendly application shell
 * **Capacitor** — Android packaging
+
+### Auth env
+
+Copy `.env.example` → `.env.local`. Required: `AUTH_SECRET`, `DATABASE_URL`. Optional: `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
+
+```bash
+npm run dev          # http://127.0.0.1:4321
+npm run build && npm start
+npm run build:static # Capacitor / serve-out path (no auth API)
+```
 
 ---
 
