@@ -8,10 +8,15 @@ const pendingDocs = new Map<string, PDFDocumentProxy>();
 let workerWarmStarted = false;
 
 export type OpenedPdf = {
+  /** Stable content hash (SHA-256 hex). Primary key for annotations + library. */
   id: string;
+  /** Same as id — explicit alias for annotation storage. */
+  hash: string;
   name: string;
   data: ArrayBuffer;
   pageCount: number;
+  /** Legacy filename-based key (migration / localStorage bridge). */
+  legacyId?: string;
 };
 
 export class PdfOpenError extends Error {
@@ -21,8 +26,34 @@ export class PdfOpenError extends Error {
   }
 }
 
+/** Filename-based id — kept for migrating older localStorage annotation keys. */
 export function makeDocumentId(file: File): string {
   return `${file.name}::${file.size}::${file.lastModified}`;
+}
+
+/** Stable SHA-256 of PDF bytes (hex). Falls back to size+sample fingerprint. */
+export async function computePdfHash(data: ArrayBuffer): Promise<string> {
+  try {
+    if (typeof crypto !== "undefined" && crypto.subtle) {
+      const digest = await crypto.subtle.digest("SHA-256", data.slice(0));
+      const bytes = new Uint8Array(digest);
+      let hex = "";
+      for (let i = 0; i < bytes.length; i += 1) {
+        hex += bytes[i].toString(16).padStart(2, "0");
+      }
+      return hex;
+    }
+  } catch {
+    // fall through
+  }
+  // Non-crypto fallback: length + sparse samples (still stable for same bytes).
+  const view = new Uint8Array(data);
+  let h = view.byteLength >>> 0;
+  const step = Math.max(1, Math.floor(view.byteLength / 64));
+  for (let i = 0; i < view.byteLength; i += step) {
+    h = (Math.imul(h ^ view[i], 0x01000193) >>> 0);
+  }
+  return `fp-${h.toString(16)}-${view.byteLength.toString(16)}`;
 }
 
 export function isPdfFile(file: File): boolean {
@@ -79,7 +110,9 @@ export async function openPdfFromFile(file: File): Promise<OpenedPdf> {
       throw new PdfOpenError("We couldn't open this PDF.");
     }
 
-    const id = makeDocumentId(file);
+    const legacyId = makeDocumentId(file);
+    const hash = await computePdfHash(owned);
+    const id = hash;
     // Drop any prior pending doc for this id so we don't leak workers/proxies.
     const prior = pendingDocs.get(id);
     if (prior) {
@@ -90,9 +123,11 @@ export async function openPdfFromFile(file: File): Promise<OpenedPdf> {
 
     return {
       id,
+      hash,
       name: file.name,
       data: owned,
       pageCount,
+      legacyId,
     };
   } catch (err) {
     if (err instanceof PdfOpenError) throw err;

@@ -22,7 +22,7 @@ import {
   openLibraryBook,
   type LibraryBookMeta,
 } from "@/lib/library";
-import { saveAnnotations } from "@/lib/annotations";
+import { saveAnnotationsByHash } from "@/lib/annotations";
 import { savePage } from "@/lib/session";
 
 type Screen = "home" | "processing" | "reader";
@@ -141,9 +141,13 @@ export default function HomePage() {
       }
       // Restore page + annotations into helpers used by the reader.
       savePage(opened.id, savedBook.lastPage ?? 0);
+      if (opened.legacyId) savePage(opened.legacyId, savedBook.lastPage ?? 0);
       const record = await getLibraryBook(savedBook.id);
       if (record?.annotations) {
-        saveAnnotations(opened.id, record.annotations);
+        await saveAnnotationsByHash(opened.hash || opened.id, {
+          ...record.annotations,
+          pdfHash: opened.hash || opened.id,
+        });
       }
       setPreparePhase("rendering");
       setBookDoc(opened);

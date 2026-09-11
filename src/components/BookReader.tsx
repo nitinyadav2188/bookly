@@ -6,14 +6,27 @@ import type { PDFDocumentProxy } from "pdfjs-dist";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { AnnotationLayer, AnnotationToolbar } from "@/components/AnnotationLayer";
+import { MyNotesPanel } from "@/components/MyNotesPanel";
 import {
   createAnnotationHistory,
-  loadAnnotations,
-  saveAnnotations,
+  defaultMeaningForColor,
+  emptyAnnotations,
+  loadAnnotationsByHash,
+  makeAnnotId,
+  saveAnnotationsByHash,
+  strokeNearPoint,
+  type AnnotTool,
+  type ColorMeaning,
+  type DocAnnotations,
   type HighlightColor,
   type NoteVibe,
+  type PageBookmark,
   type PageHighlight,
   type PageNote,
+  type PageStroke,
+  type PenInk,
+  type PenWidth,
+  type StrokeKind,
 } from "@/lib/annotations";
 import {
   downloadBookBundle,
@@ -151,17 +164,26 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   const [jumpDraft, setJumpDraft] = useState("");
   const [editingJump, setEditingJump] = useState(false);
   const [annotateMode, setAnnotateMode] = useState(false);
-  const [annotTool, setAnnotTool] = useState<"highlight" | "note">("highlight");
+  const [annotTool, setAnnotTool] = useState<AnnotTool>("highlight");
   const [annotColor, setAnnotColor] = useState<HighlightColor>("yellow");
+  const [annotMeaning, setAnnotMeaning] = useState<ColorMeaning>("important");
   const [annotVibe, setAnnotVibe] = useState<NoteVibe>("yellow");
+  const [penInk, setPenInk] = useState<PenInk>("black");
+  const [penWidth, setPenWidth] = useState<PenWidth>("medium");
+  const [strokeKind, setStrokeKind] = useState<StrokeKind>("pen");
   const [highlights, setHighlights] = useState<PageHighlight[]>([]);
   const [notes, setNotes] = useState<PageNote[]>([]);
+  const [bookmarks, setBookmarks] = useState<PageBookmark[]>([]);
+  const [strokes, setStrokes] = useState<PageStroke[]>([]);
   const [markedFlash, setMarkedFlash] = useState(false);
   const [annotsHydrated, setAnnotsHydrated] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [downloadFlash, setDownloadFlash] = useState<string | null>(null);
   const [libraryHint, setLibraryHint] = useState<string | null>(null);
+  const [flipping, setFlipping] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [focusAnnotId, setFocusAnnotId] = useState<string | null>(null);
   const pdfAspectRef = useRef(1.414); // A4-ish default until first page measures
   const panDragRef = useRef<{
     pointerId: number;
@@ -171,13 +193,21 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     originY: number;
   } | null>(null);
   const historyRef = useRef(createAnnotationHistory());
-  const annotsRef = useRef({ highlights, notes });
+  const annotsRef = useRef<DocAnnotations>(emptyAnnotations(doc.hash || doc.id));
   const noteEditBatchRef = useRef<Set<string>>(new Set());
   const persistTimerRef = useRef<number | null>(null);
 
   soundOnRef.current = soundOn;
   readyRef.current = ready;
-  annotsRef.current = { highlights, notes };
+  const pdfHash = doc.hash || doc.id;
+  annotsRef.current = {
+    version: 2,
+    pdfHash,
+    highlights,
+    notes,
+    bookmarks,
+    strokes,
+  };
 
   const syncHistoryFlags = useCallback(() => {
     setCanUndo(historyRef.current.canUndo());
@@ -190,27 +220,47 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     syncHistoryFlags();
   }, [syncHistoryFlags]);
 
+  const applyAnnotState = useCallback((data: DocAnnotations) => {
+    setHighlights(data.highlights);
+    setNotes(data.notes);
+    setBookmarks(data.bookmarks ?? []);
+    setStrokes(data.strokes ?? []);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     setAnnotsHydrated(false);
     void (async () => {
-      let data = loadAnnotations(doc.id);
-      if (data.highlights.length === 0 && data.notes.length === 0) {
+      const legacyIds = [doc.legacyId, doc.id].filter(Boolean) as string[];
+      let data = await loadAnnotationsByHash(pdfHash, legacyIds);
+      if (
+        data.highlights.length === 0 &&
+        data.notes.length === 0 &&
+        (data.bookmarks?.length ?? 0) === 0 &&
+        (data.strokes?.length ?? 0) === 0
+      ) {
         try {
           const { getLibraryAnnotations } = await import("@/lib/library");
           const fromLib = await getLibraryAnnotations(doc.id);
-          if (fromLib && (fromLib.highlights.length > 0 || fromLib.notes.length > 0)) {
-            data = fromLib;
-            saveAnnotations(doc.id, data);
+          if (
+            fromLib &&
+            (fromLib.highlights.length > 0 ||
+              fromLib.notes.length > 0 ||
+              (fromLib.bookmarks?.length ?? 0) > 0 ||
+              (fromLib.strokes?.length ?? 0) > 0)
+          ) {
+            data = { ...fromLib, pdfHash };
+            await saveAnnotationsByHash(pdfHash, data);
           }
         } catch {
           // ignore
         }
       }
       if (cancelled) return;
-      setHighlights(data.highlights);
-      setNotes(data.notes);
+      applyAnnotState(data);
       setAnnotateMode(false);
+      setNotesOpen(false);
+      setFocusAnnotId(null);
       historyRef.current.clear();
       noteEditBatchRef.current.clear();
       setCanUndo(false);
@@ -220,7 +270,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     return () => {
       cancelled = true;
     };
-  }, [doc.id]);
+  }, [doc.id, doc.legacyId, pdfHash, applyAnnotState]);
 
   // Signal meaningful reader use for the experience-feedback popup.
   useEffect(() => {
@@ -238,8 +288,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         name: doc.name,
         data: doc.data,
         pageCount: doc.pageCount,
-        lastPage: getSavedPage(doc.id) ?? 0,
-        annotations: loadAnnotations(doc.id),
+        lastPage: getSavedPage(doc.id) ?? getSavedPage(doc.legacyId ?? "") ?? 0,
+        annotations: annotsRef.current,
       });
       if (cancelled) return;
       if (result.ok && result.skipped) {
@@ -255,19 +305,20 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     return () => {
       cancelled = true;
     };
-  }, [doc.id, doc.name, doc.data, doc.pageCount]);
+  }, [doc.id, doc.name, doc.data, doc.pageCount, doc.legacyId]);
 
   useEffect(() => {
     if (!annotsHydrated) return;
-    saveAnnotations(doc.id, { highlights, notes });
+    const payload = annotsRef.current;
     if (persistTimerRef.current != null) window.clearTimeout(persistTimerRef.current);
     persistTimerRef.current = window.setTimeout(() => {
-      void updateLibraryProgress(doc.id, { annotations: { highlights, notes } });
-    }, 400);
+      void saveAnnotationsByHash(pdfHash, payload);
+      void updateLibraryProgress(doc.id, { annotations: payload });
+    }, 350);
     return () => {
       if (persistTimerRef.current != null) window.clearTimeout(persistTimerRef.current);
     };
-  }, [doc.id, highlights, notes, annotsHydrated]);
+  }, [doc.id, pdfHash, highlights, notes, bookmarks, strokes, annotsHydrated]);
 
   const ensurePagesRendered = useCallback(
     async (centerIndex: number, radiusOverride?: number) => {
@@ -530,8 +581,10 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         setStatus("");
 
         flip.on("changeState", (e) => {
+          const state = String(e.data);
+          setFlipping(state === "flipping");
           // Fire sound as the curl begins — feels tied to the gesture.
-          if (String(e.data) !== "flipping") return;
+          if (state !== "flipping") return;
           if (!soundOnRef.current) return;
           if (Date.now() <= ignoreSoundUntilRef.current) return;
           playPageTurnSound(true);
@@ -637,7 +690,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
 
   const handleDownload = useCallback(() => {
     try {
-      const bundle = downloadBookBundle(doc, { highlights, notes });
+      const bundle = downloadBookBundle(doc, annotsRef.current);
       setDownloadFlash(
         bundle.annotationsName
           ? `Saved ${bundle.pdfName} + notes`
@@ -649,7 +702,7 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       setDownloadFlash("Download failed");
       window.setTimeout(() => setDownloadFlash(null), 3200);
     }
-  }, [doc, highlights, notes]);
+  }, [doc]);
 
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -747,6 +800,18 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     [pushAnnotHistory],
   );
 
+  const updateHighlight = useCallback(
+    (id: string, patch: Partial<PageHighlight>) => {
+      if (!noteEditBatchRef.current.has(id)) {
+        historyRef.current.push(annotsRef.current);
+        noteEditBatchRef.current.add(id);
+        syncHistoryFlags();
+      }
+      setHighlights((prev) => prev.map((h) => (h.id === id ? { ...h, ...patch } : h)));
+    },
+    [syncHistoryFlags],
+  );
+
   const deleteHighlight = useCallback(
     (id: string) => {
       pushAnnotHistory();
@@ -766,24 +831,35 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
   }, []);
 
   const updateNote = useCallback(
-    (id: string, text: string) => {
-      // Coalesce keystrokes for one note into a single undo step.
-      if (!noteEditBatchRef.current.has(id)) {
-        const existing = annotsRef.current.notes.find((n) => n.id === id);
-        const snapshot =
-          existing && existing.text.trim()
-            ? annotsRef.current
-            : {
-                highlights: annotsRef.current.highlights,
-                notes: annotsRef.current.notes.filter((n) => n.id !== id),
-              };
-        historyRef.current.push(snapshot);
-        noteEditBatchRef.current.add(id);
-        syncHistoryFlags();
+    (id: string, patch: Partial<PageNote>) => {
+      if (patch.text !== undefined) {
+        if (!noteEditBatchRef.current.has(id)) {
+          const existing = annotsRef.current.notes.find((n) => n.id === id);
+          const snapshot =
+            existing && existing.text.trim()
+              ? annotsRef.current
+              : {
+                  ...annotsRef.current,
+                  notes: annotsRef.current.notes.filter((n) => n.id !== id),
+                };
+          historyRef.current.push(snapshot);
+          noteEditBatchRef.current.add(id);
+          syncHistoryFlags();
+        }
+      } else if (patch.x !== undefined || patch.y !== undefined) {
+        // Coalesce a drag into one undo step.
+        const moveKey = `move:${id}`;
+        if (!noteEditBatchRef.current.has(moveKey)) {
+          historyRef.current.push(annotsRef.current);
+          noteEditBatchRef.current.add(moveKey);
+          syncHistoryFlags();
+        }
+      } else {
+        pushAnnotHistory();
       }
-      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, text } : n)));
+      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch } : n)));
     },
-    [syncHistoryFlags],
+    [pushAnnotHistory, syncHistoryFlags],
   );
 
   const deleteNote = useCallback(
@@ -794,23 +870,77 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     [pushAnnotHistory],
   );
 
+  const addStroke = useCallback(
+    (s: PageStroke) => {
+      pushAnnotHistory();
+      setStrokes((prev) => [...prev, s]);
+    },
+    [pushAnnotHistory],
+  );
+
+  const eraseStrokesAt = useCallback(
+    (page: number, x: number, y: number) => {
+      const radius = 0.028;
+      const hit = annotsRef.current.strokes.filter(
+        (s) => s.page === page && strokeNearPoint(s, x, y, radius),
+      );
+      if (!hit.length) return;
+      pushAnnotHistory();
+      const remove = new Set(hit.map((s) => s.id));
+      setStrokes((prev) => prev.filter((s) => !remove.has(s.id)));
+    },
+    [pushAnnotHistory],
+  );
+
+  const toggleBookmark = useCallback(
+    (page = pageIndex) => {
+      pushAnnotHistory();
+      setBookmarks((prev) => {
+        const existing = prev.find((b) => b.page === page);
+        if (existing) return prev.filter((b) => b.id !== existing.id);
+        return [
+          ...prev,
+          {
+            id: makeAnnotId("bm"),
+            page,
+            createdAt: Date.now(),
+          },
+        ];
+      });
+    },
+    [pageIndex, pushAnnotHistory],
+  );
+
+  const removeBookmark = useCallback(
+    (id: string) => {
+      pushAnnotHistory();
+      setBookmarks((prev) => prev.filter((b) => b.id !== id));
+    },
+    [pushAnnotHistory],
+  );
+
   const undoAnnot = useCallback(() => {
     const next = historyRef.current.undo(annotsRef.current);
     if (!next) return;
     noteEditBatchRef.current.clear();
-    setHighlights(next.highlights);
-    setNotes(next.notes);
+    applyAnnotState(next);
     syncHistoryFlags();
-  }, [syncHistoryFlags]);
+  }, [applyAnnotState, syncHistoryFlags]);
 
   const redoAnnot = useCallback(() => {
     const next = historyRef.current.redo(annotsRef.current);
     if (!next) return;
     noteEditBatchRef.current.clear();
-    setHighlights(next.highlights);
-    setNotes(next.notes);
+    applyAnnotState(next);
     syncHistoryFlags();
-  }, [syncHistoryFlags]);
+  }, [applyAnnotState, syncHistoryFlags]);
+
+  const exitAnnotateMode = useCallback(() => {
+    setAnnotateMode(false);
+    setNotes((prev) => prev.filter((n) => n.text.trim().length > 0));
+    setNotesOpen(false);
+    setFocusAnnotId(null);
+  }, []);
 
   // Mobile / tablet: finger-follow drag + half-page taps via gesture layer
   const onGesturePointerDown = useCallback(
@@ -955,14 +1085,18 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     [canAnimateFlip, annotateMode],
   );
 
-  // Keyboard navigation (desktop-primary; still works on touch devices with keyboards)
+  // Keyboard navigation + annotation shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!readyRef.current) return;
       const tag = (e.target as HTMLElement | null)?.tagName;
-      const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+      const typing =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        (e.target as HTMLElement | null)?.isContentEditable;
 
-      if (annotateMode && (e.metaKey || e.ctrlKey)) {
+      if (annotateMode && (e.metaKey || e.ctrlKey) && !typing) {
         const key = e.key.toLowerCase();
         if (key === "z" && !e.shiftKey) {
           e.preventDefault();
@@ -977,7 +1111,37 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
       }
 
       if (typing) return;
-      if (annotateMode) return;
+
+      if (annotateMode) {
+        const key = e.key.toLowerCase();
+        if (key === "h") {
+          e.preventDefault();
+          setAnnotTool("highlight");
+          return;
+        }
+        if (key === "n") {
+          e.preventDefault();
+          setAnnotTool("note");
+          return;
+        }
+        if (key === "p") {
+          e.preventDefault();
+          setAnnotTool("pen");
+          return;
+        }
+        if (key === "b") {
+          e.preventDefault();
+          setAnnotTool("bookmark");
+          toggleBookmark(pageIndex);
+          return;
+        }
+        if (key === "escape") {
+          e.preventDefault();
+          exitAnnotateMode();
+          return;
+        }
+        return;
+      }
 
       if (e.key === "ArrowRight" || e.key === " " || e.code === "Space") {
         e.preventDefault();
@@ -997,7 +1161,17 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goNext, goPrev, bumpZoom, annotateMode, undoAnnot, redoAnnot]);
+  }, [
+    goNext,
+    goPrev,
+    bumpZoom,
+    annotateMode,
+    undoAnnot,
+    redoAnnot,
+    toggleBookmark,
+    pageIndex,
+    exitAnnotateMode,
+  ]);
 
   // Block background page scroll while the reader is open
   useEffect(() => {
@@ -1122,8 +1296,9 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
               setAnnotateMode((v) => {
                 const next = !v;
                 if (!next) {
-                  // Drop unfinished empty notes when leaving annotate mode.
                   setNotes((prev) => prev.filter((n) => n.text.trim().length > 0));
+                  setNotesOpen(false);
+                  setFocusAnnotId(null);
                 }
                 return next;
               });
@@ -1173,14 +1348,28 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           <AnnotationToolbar
             tool={annotTool}
             color={annotColor}
+            meaning={annotMeaning}
             vibe={annotVibe}
+            penInk={penInk}
+            penWidth={penWidth}
+            strokeKind={strokeKind}
             canUndo={canUndo}
             canRedo={canRedo}
+            pageBookmarked={bookmarks.some((b) => b.page === pageIndex)}
             onTool={setAnnotTool}
-            onColor={setAnnotColor}
+            onColor={(c) => {
+              setAnnotColor(c);
+              setAnnotMeaning(defaultMeaningForColor(c));
+            }}
+            onMeaning={setAnnotMeaning}
             onVibe={setAnnotVibe}
+            onPenInk={setPenInk}
+            onPenWidth={setPenWidth}
+            onStrokeKind={setStrokeKind}
             onUndo={undoAnnot}
             onRedo={redoAnnot}
+            onToggleBookmark={() => toggleBookmark(pageIndex)}
+            onOpenNotes={() => setNotesOpen(true)}
           />
         </div>
       ) : null}
@@ -1237,18 +1426,32 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
                 active={annotateMode}
                 tool={annotTool}
                 color={annotColor}
+                meaning={annotMeaning}
                 vibe={annotVibe}
+                penInk={penInk}
+                penWidth={penWidth}
+                strokeKind={strokeKind}
                 pageIndex={pageIndex}
                 isNarrow={isNarrow}
+                flipping={flipping}
                 hostRef={hostRef}
                 highlights={highlights}
                 notes={notes}
+                bookmarks={bookmarks}
+                strokes={strokes}
+                focusId={focusAnnotId}
                 onAddHighlight={addHighlight}
+                onUpdateHighlight={updateHighlight}
+                onDeleteHighlight={deleteHighlight}
                 onAddNote={addNote}
                 onUpdateNote={updateNote}
                 onDeleteNote={deleteNote}
                 onDiscardEmptyNote={discardEmptyNote}
-                onDeleteHighlight={deleteHighlight}
+                onAddStroke={addStroke}
+                onEraseStrokesAt={eraseStrokesAt}
+                onToggleBookmark={toggleBookmark}
+                onJumpToPage={(page) => jumpToPage(String(page + 1))}
+                onRemoveBookmark={removeBookmark}
               />
             ) : null}
 
@@ -1309,14 +1512,30 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             <AnnotationToolbar
               tool={annotTool}
               color={annotColor}
+              meaning={annotMeaning}
               vibe={annotVibe}
+              penInk={penInk}
+              penWidth={penWidth}
+              strokeKind={strokeKind}
               canUndo={canUndo}
               canRedo={canRedo}
+              pageBookmarked={bookmarks.some((b) => b.page === pageIndex)}
               onTool={setAnnotTool}
-              onColor={setAnnotColor}
+              onColor={(c) => {
+                setAnnotColor(c);
+                setAnnotMeaning(defaultMeaningForColor(c));
+              }}
+              onMeaning={setAnnotMeaning}
               onVibe={setAnnotVibe}
+              onPenInk={setPenInk}
+              onPenWidth={setPenWidth}
+              onStrokeKind={setStrokeKind}
               onUndo={undoAnnot}
               onRedo={redoAnnot}
+              onToggleBookmark={() => toggleBookmark(pageIndex)}
+              onOpenNotes={() => setNotesOpen(true)}
+              showDone
+              onDone={exitAnnotateMode}
             />
           </div>
         ) : null}
@@ -1387,6 +1606,25 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           ) : null}
         </div>
       </div>
+
+      <MyNotesPanel
+        open={notesOpen}
+        docName={doc.name}
+        data={{
+          version: 2,
+          pdfHash,
+          highlights,
+          notes,
+          bookmarks,
+          strokes,
+        }}
+        onClose={() => setNotesOpen(false)}
+        onNavigate={(item) => {
+          setFocusAnnotId(item.id);
+          jumpToPage(String(item.page + 1));
+          setNotesOpen(false);
+        }}
+      />
     </div>
   );
 }

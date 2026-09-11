@@ -1,5 +1,9 @@
-import type { DocAnnotations } from "@/lib/annotations";
-import type { OpenedPdf } from "@/lib/pdf";
+import {
+  emptyAnnotations,
+  sanitizeAnnotations,
+  type DocAnnotations,
+} from "@/lib/annotations";
+import { computePdfHash, type OpenedPdf } from "@/lib/pdf";
 
 const DB_NAME = "bookly-library";
 const DB_VERSION = 1;
@@ -31,8 +35,12 @@ export type LibrarySaveResult =
   | { ok: true; skipped: true; reason: "too-large" }
   | { ok: false; reason: "quota" | "unavailable" | "unknown"; message: string };
 
-function emptyAnnots(): DocAnnotations {
-  return { highlights: [], notes: [] };
+function emptyAnnots(pdfHash = ""): DocAnnotations {
+  return emptyAnnotations(pdfHash);
+}
+
+function cloneAnnots(data: DocAnnotations, pdfHash = data.pdfHash): DocAnnotations {
+  return sanitizeAnnotations(data, pdfHash || data.pdfHash);
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -121,10 +129,10 @@ function normalizeRecord(raw: Partial<LibraryBookRecord> & { id: string }): Libr
     lastOpenedAt: Number(raw.lastOpenedAt) || Date.now(),
     lastPage: Math.max(0, Number(raw.lastPage) || 0),
     data: raw.data,
-    annotations: {
-      highlights: Array.isArray(annots?.highlights) ? annots.highlights : [],
-      notes: Array.isArray(annots?.notes) ? annots.notes : [],
-    },
+    annotations: sanitizeAnnotations(
+      (annots as Partial<DocAnnotations>) ?? {},
+      raw.id,
+    ),
   };
 }
 
@@ -188,11 +196,20 @@ export async function openLibraryBook(id: string): Promise<OpenedPdf | null> {
     // ignore touch failures
   }
 
+  const data = record.data.slice(0);
+  // Prefer stored hash-id; recompute if this is a legacy filename-based record.
+  const hash =
+    /^[a-f0-9]{64}$/i.test(record.id) || record.id.startsWith("fp-")
+      ? record.id
+      : await computePdfHash(data);
+
   return {
-    id: record.id,
+    id: hash,
+    hash,
     name: record.name,
-    data: record.data.slice(0),
+    data,
     pageCount: record.pageCount,
+    legacyId: record.id !== hash ? record.id : undefined,
   };
 }
 
@@ -234,16 +251,10 @@ export async function saveLibraryBook(input: {
             ? Math.max(0, input.lastPage)
             : Math.max(0, existing?.lastPage ?? 0),
         annotations: input.annotations
-          ? {
-              highlights: [...input.annotations.highlights],
-              notes: [...input.annotations.notes],
-            }
+          ? cloneAnnots(input.annotations, input.id)
           : existing?.annotations
-            ? {
-                highlights: [...(existing.annotations.highlights ?? [])],
-                notes: [...(existing.annotations.notes ?? [])],
-              }
-            : emptyAnnots(),
+            ? cloneAnnots(existing.annotations, input.id)
+            : emptyAnnots(input.id),
       };
 
       const write = async () => {
@@ -314,10 +325,7 @@ export async function updateLibraryProgress(
         existing.lastPage = Math.max(0, patch.lastPage);
       }
       if (patch.annotations) {
-        existing.annotations = {
-          highlights: [...patch.annotations.highlights],
-          notes: [...patch.annotations.notes],
-        };
+        existing.annotations = cloneAnnots(patch.annotations, id);
       }
       existing.lastOpenedAt = Date.now();
       store.put(existing);
@@ -391,7 +399,10 @@ export function downloadBookBundle(
 
   const hasAnnots =
     annotations &&
-    ((annotations.highlights?.length ?? 0) > 0 || (annotations.notes?.length ?? 0) > 0);
+    ((annotations.highlights?.length ?? 0) > 0 ||
+      (annotations.notes?.length ?? 0) > 0 ||
+      (annotations.bookmarks?.length ?? 0) > 0 ||
+      (annotations.strokes?.length ?? 0) > 0);
 
   if (!hasAnnots || !annotations) {
     return { pdfName };
@@ -402,8 +413,12 @@ export function downloadBookBundle(
     {
       book: doc.name,
       exportedAt: new Date().toISOString(),
+      version: annotations.version ?? 2,
+      pdfHash: annotations.pdfHash,
       highlights: annotations.highlights,
       notes: annotations.notes,
+      bookmarks: annotations.bookmarks ?? [],
+      strokes: annotations.strokes ?? [],
     },
     annotationsName,
   );
