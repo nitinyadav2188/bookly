@@ -438,8 +438,8 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
             pageWidth = Math.floor(pageHeight / aspect);
           }
 
-          pageWidth = Math.min(touchPrimary ? 720 : 680, Math.max(160, pageWidth));
-          pageHeight = Math.min(touchPrimary ? 1200 : 1100, Math.max(180, pageHeight));
+          pageWidth = Math.min(touchPrimary || isNarrow ? 1200 : 680, Math.max(160, pageWidth));
+          pageHeight = Math.min(touchPrimary || isNarrow ? 1600 : 1100, Math.max(180, pageHeight));
 
           return { pageWidth, pageHeight, availW, availH };
         };
@@ -470,6 +470,11 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           return;
         }
         const { pageWidth, pageHeight } = sized;
+        // Phones/tablets (and narrow viewports) must stay single-page. StPageFlip
+        // only enters portrait when blockWidth < minWidth*2; with the default
+        // minWidth of 200, hosts ≥400px (Pro Max, landscape phone, iPad) flip
+        // into a 2-page landscape spread. Inflate minWidth so portrait sticks.
+        const forceSinglePage = isNarrow || touchPrimary;
 
         ignoreSoundUntilRef.current = Date.now() + 900;
 
@@ -479,10 +484,12 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
           width: pageWidth,
           height: pageHeight,
           size: SIZE_STRETCH,
-          minWidth: 200,
-          maxWidth: touchPrimary ? 820 : 760,
+          // 2000 ⇒ portrait while host < 4000px (all phones/tablets). CSS below
+          // clears the library's matching min-width so layout doesn't overflow.
+          minWidth: forceSinglePage ? 2000 : 200,
+          maxWidth: forceSinglePage ? 1400 : touchPrimary ? 820 : 760,
           minHeight: 280,
-          maxHeight: touchPrimary ? 1400 : 1280,
+          maxHeight: forceSinglePage ? 1800 : touchPrimary ? 1400 : 1280,
           drawShadow: true,
           // Richer flip shadows for a physical page-turn; keep mobile a touch softer.
           maxShadowOpacity: touchPrimary ? 0.62 : 0.88,
@@ -501,6 +508,19 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
         } as any);
 
         flip.loadFromHTML(pageNodes as NodeListOf<HTMLElement>);
+
+        if (forceSinglePage) {
+          const parent = host.querySelector(".stf__parent") as HTMLElement | null;
+          if (parent) {
+            parent.style.minWidth = "0px";
+            parent.style.width = "100%";
+            parent.style.maxWidth = "100%";
+          }
+          // Keep settings ahead of any later resize so orientation stays portrait.
+          const settings = flip.getSettings() as { minWidth?: number };
+          settings.minWidth = 2000;
+        }
+
         flipRef.current = flip;
         lastIndexRef.current = startPage;
         setPageIndex(startPage);
@@ -536,6 +556,15 @@ export function BookReader({ document: doc, onExit }: BookReaderProps) {
 
         if (typeof ResizeObserver !== "undefined") {
           resizeObserver = new ResizeObserver(() => {
+            if (forceSinglePage && flipRef.current) {
+              const settings = flipRef.current.getSettings() as { minWidth?: number };
+              settings.minWidth = 2000;
+              const parent = host.querySelector(".stf__parent") as HTMLElement | null;
+              if (parent) {
+                parent.style.minWidth = "0px";
+                parent.style.maxWidth = "100%";
+              }
+            }
             // PageFlip stretch mode adapts; keep nearby pages warm
             void ensurePagesRendered(lastIndexRef.current);
           });

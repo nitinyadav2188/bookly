@@ -577,6 +577,24 @@ body {
   height: calc(100% - 8px);
 }
 
+/*
+ * StPageFlip sets .stf__parent min-width from settings.minWidth. We inflate
+ * minWidth on touch so portrait (single page) never flips to a 2-page spread;
+ * clear that CSS min-width so the stage doesn't overflow horizontally.
+ */
+.reader-shell.is-touch .reader-book-host .stf__parent {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Portrait mode parks the page on the right half of a virtual spread —
+   keep the visible sheet centered and fully using the host. */
+.reader-shell.is-touch .reader-book-host .stf__wrapper.--portrait {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .reader-shell.is-touch .book-page {
   background: var(--paper-ivory);
 }
