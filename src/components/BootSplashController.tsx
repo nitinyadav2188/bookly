@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 /** Intentional brand beat so the mage+book animation can be enjoyed (~2s). */
 const MIN_MS = 2000;
@@ -10,6 +11,8 @@ const FONT_BUDGET_MS = 80;
 const REDUCED_MIN_MS = 800;
 const REDUCED_MAX_MS = 1000;
 
+const SKIP_SPLASH_PREFIXES = ["/login", "/signup", "/account"];
+
 /**
  * Hides the SSR boot splash once the app is hydrated, after a minimum hold.
  * Does not wait on window `load` or long `document.fonts` — those stall on
@@ -17,11 +20,19 @@ const REDUCED_MAX_MS = 1000;
  * app-open splash is held (PDF upload path is unaffected after dismiss).
  */
 export function BootSplashController() {
+  const pathname = usePathname();
+
   useEffect(() => {
     const el = document.getElementById("bookly-boot-splash");
     if (!el) return;
     // Verification scripts may freeze the splash via data-hold.
     if (el.dataset.hold === "1") return;
+
+    if (SKIP_SPLASH_PREFIXES.some((p) => pathname === p || pathname?.startsWith(`${p}/`))) {
+      el.classList.add("is-done");
+      el.remove();
+      return;
+    }
 
     const reduced =
       typeof window.matchMedia === "function" &&
@@ -63,7 +74,7 @@ export function BootSplashController() {
 
     const hard = window.setTimeout(finish, maxMs);
     return () => window.clearTimeout(hard);
-  }, []);
+  }, [pathname]);
 
   return null;
 }

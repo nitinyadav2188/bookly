@@ -1,11 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo_Black, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { auth } from "@/auth";
 import { AuthSessionProvider } from "@/components/AuthSessionProvider";
 import { BootSplashController } from "@/components/BootSplashController";
 import { BootSplashMage } from "@/components/BootSplashMage";
 import { ExperienceFeedback } from "@/components/ExperienceFeedback";
 import "./globals.css";
+
+export const dynamic = "force-dynamic";
 
 const display = Archivo_Black({
   variable: "--font-display",
@@ -100,7 +103,8 @@ html,body{background:#fdfceb;margin:0;min-height:100%}
 }
 `;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const session = await auth();
   return (
     <html
       lang="en"
@@ -127,7 +131,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
         <BootSplashController />
-        <AuthSessionProvider>
+        <AuthSessionProvider session={session}>
           {children}
           <ExperienceFeedback />
         </AuthSessionProvider>

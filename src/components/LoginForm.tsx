@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
 type LoginFormProps = {
@@ -10,7 +10,6 @@ type LoginFormProps = {
 };
 
 export function LoginForm({ googleEnabled }: LoginFormProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const [email, setEmail] = useState("");
@@ -35,8 +34,8 @@ export function LoginForm({ googleEnabled }: LoginFormProps) {
         setPending(false);
         return;
       }
-      router.push(callbackUrl);
-      router.refresh();
+      // Hard navigation so the server layout re-reads the session cookie.
+      window.location.assign(callbackUrl || "/");
     } catch {
       setError("Could not sign in. Try again.");
       setPending(false);

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
 type SignupFormProps = {
@@ -10,7 +9,6 @@ type SignupFormProps = {
 };
 
 export function SignupForm({ googleEnabled }: SignupFormProps) {
-  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,11 +46,10 @@ export function SignupForm({ googleEnabled }: SignupFormProps) {
       if (result?.error) {
         setError("Account created, but sign-in failed. Try logging in.");
         setPending(false);
-        router.push("/login");
+        window.location.assign("/login");
         return;
       }
-      router.push("/");
-      router.refresh();
+      window.location.assign("/");
     } catch {
       setError("Could not create account. Try again.");
       setPending(false);
